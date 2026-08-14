@@ -13,6 +13,12 @@ import time
 
 from pydantic import BaseModel, Field, ValidationError
 
+try:  # load .env from the project root so keys work without shell exports
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from backend.prompts import build_system_prompt
 from sim.twin import ZONES
 
