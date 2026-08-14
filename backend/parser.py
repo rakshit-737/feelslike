@@ -131,10 +131,18 @@ def _call_anthropic(text: str) -> ParsedComplaint:
 
 
 def _call_openai(text: str) -> ParsedComplaint:
+    """OpenAI-compatible chat endpoint. Works with any provider that speaks the
+    same protocol — set LLM_BASE_URL to use a free tier:
+      Groq:   https://api.groq.com/openai/v1          (model llama-3.3-70b-versatile)
+      Gemini: https://generativelanguage.googleapis.com/v1beta/openai
+              (model gemini-2.5-flash)
+      Ollama: http://localhost:11434/v1               (model llama3.2, key can be any string)
+    """
     import httpx
 
+    base = os.environ.get("LLM_BASE_URL", "https://api.openai.com/v1").rstrip("/")
     r = httpx.post(
-        "https://api.openai.com/v1/chat/completions",
+        f"{base}/chat/completions",
         headers={"Authorization": f"Bearer {os.environ['OPENAI_API_KEY']}"},
         json={"model": os.environ.get("LLM_MODEL", "gpt-4o-mini"),
               "response_format": {"type": "json_object"},

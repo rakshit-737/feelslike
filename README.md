@@ -46,8 +46,11 @@ macOS/Linux: `python3 -m venv .venv && source .venv/bin/activate` — everything
 
 Optional LLM parser: copy `.env.example` → `.env`, add `ANTHROPIC_API_KEY` (or
 `OPENAI_API_KEY`), and `pip install python-dotenv`; run uvicorn with the venv
-activated and the key exported. **No key needed** — the offline rules parser
-keeps the whole demo functional (that's your demo-day insurance).
+activated and the key exported. **Free option:** any OpenAI-compatible provider
+works via `LLM_BASE_URL` — Groq's free tier (Llama 3.3 70B, sub-second) or
+Google AI Studio (Gemini 2.5 Flash) cost nothing; see `.env.example` for the
+exact three lines. **No key needed** — the offline rules parser keeps the whole
+demo functional (that's your demo-day insurance).
 
 ## What's where
 
