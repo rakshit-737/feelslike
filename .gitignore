@@ -9,3 +9,4 @@ __pycache__/
 
 # training noise (models + progress.csv are committed)
 rl/train_log.txt
+.opencode

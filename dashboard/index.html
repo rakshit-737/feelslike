@@ -5,18 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FeelsLike — Buildings That Listen</title>
 <style>
-  .viz-root, :root {
-    color-scheme: light;
+  :root {
+    color-scheme: light; /* demo machine is known: light is pinned, no half-dark */
     --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e;
     --muted:#898781; --grid:#e1e0d9; --baseline:#c3c2b7;
     --border:rgba(11,11,11,0.10); --us:#2a78d6; --base:#898781;
     --good:#006300; --warn:#fab219; --crit:#d03b3b;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root { color-scheme: dark;
-      --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7;
-      --muted:#898781; --grid:#2c2c2a; --baseline:#383835;
-      --border:rgba(255,255,255,0.10); --us:#3987e5; --base:#898781; --good:#0ca30c; }
   }
   * { box-sizing:border-box; margin:0; }
   body { background:var(--page); color:var(--ink);
@@ -27,10 +21,43 @@
   .pill { background:var(--surface); border:1px solid var(--border); border-radius:99px;
           padding:3px 12px; font-size:12.5px; color:var(--ink2); }
   .pill b { color:var(--ink); font-variant-numeric:tabular-nums; }
+  .pill-stale { color:var(--crit); border-color:var(--crit); font-weight:600; }
   .speed { margin-left:auto; display:flex; gap:6px; }
   .speed button { border:1px solid var(--border); background:var(--surface); color:var(--ink2);
                   border-radius:8px; padding:3px 10px; cursor:pointer; font-size:12px; }
   .speed button.on { color:var(--ink); border-color:var(--ink2); font-weight:600; }
+
+  body.stale .race, body.stale .tiles, body.stale .grid { opacity:0.55; transition:opacity 0.4s; }
+
+  /* ---- the race: the one place the page is loud ---- */
+  .race { background:var(--surface); border:1px solid var(--border); border-radius:12px;
+          padding:14px 16px; margin-bottom:12px;
+          display:grid; grid-template-columns:auto 1fr; gap:6px 28px; align-items:center; }
+  @media (max-width:720px){ .race{ grid-template-columns:1fr; } }
+  .race h2 { grid-column:1 / -1; font-size:13px; color:var(--ink2); font-weight:600;
+             display:flex; gap:8px; }
+  .race h2 .right { margin-left:auto; font-weight:400; color:var(--muted); font-size:12px; }
+  .race-pct { font-size:44px; font-weight:700; letter-spacing:-0.03em; line-height:1;
+              color:var(--good); font-variant-numeric:tabular-nums; }
+  .race-pct-lbl { font-size:12px; color:var(--ink2); margin-top:4px; max-width:180px; }
+  .race-track { display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .race-row { display:grid; grid-template-columns:74px 1fr 110px; gap:10px; align-items:center; }
+  .race-name { font-size:12px; font-weight:600; color:var(--ink2); }
+  .race-name.us { color:var(--us); }
+  .race-bar { height:16px; background:var(--page); border:1px solid var(--grid);
+              border-radius:99px; overflow:hidden; }
+  .race-fill { height:100%; border-radius:99px; width:100%;
+               transform-origin:left; transform:scaleX(0);
+               transition:transform 0.9s cubic-bezier(0.22,1,0.36,1); }
+  .race-fill.us { background:var(--us); }
+  .race-fill.base { background:var(--baseline); }
+  .race-val { font-size:14px; font-weight:600; font-variant-numeric:tabular-nums;
+              text-align:right; white-space:nowrap; }
+  .race-comfort { grid-column:1 / -1; font-size:13px; color:var(--ink2);
+                  border-top:1px solid var(--grid); padding-top:8px; margin-top:2px;
+                  font-variant-numeric:tabular-nums; }
+  .race-comfort b.c-good { color:var(--good); }
+  .race-comfort b.c-crit { color:var(--crit); }
 
   .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
            gap:10px; margin-bottom:12px; }
@@ -38,7 +65,8 @@
           padding:12px 14px; }
   .tile .lbl { font-size:11.5px; color:var(--muted); text-transform:uppercase;
                letter-spacing:0.05em; margin-bottom:4px; }
-  .tile .val { font-size:26px; font-weight:650; letter-spacing:-0.02em; }
+  .tile .val { font-size:26px; font-weight:650; letter-spacing:-0.02em;
+               font-variant-numeric:tabular-nums; }
   .tile .sub { font-size:12px; color:var(--ink2); margin-top:2px;
                font-variant-numeric:tabular-nums; }
   .delta-good { color:var(--good); font-weight:600; }
@@ -58,14 +86,14 @@
   .zone-name { font-size:11px; }
   .zone-temp { font-size:20px; font-weight:650; }
   .zone-meta { font-size:10.5px; }
-  .flag { font-size:10px; font-weight:700; }
 
   table.zones { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
   table.zones th { text-align:left; color:var(--muted); font-size:11px; font-weight:600;
                    border-bottom:1px solid var(--grid); padding:4px 6px; }
   table.zones td { padding:5px 6px; border-bottom:1px solid var(--grid); font-size:13px; }
 
-  .legend { display:flex; gap:14px; font-size:12px; color:var(--ink2); margin-bottom:6px; }
+  .legend { display:flex; gap:14px; font-size:12px; color:var(--ink2); margin-bottom:6px;
+            flex-wrap:wrap; }
   .chip { display:inline-block; width:10px; height:10px; border-radius:3px;
           margin-right:5px; vertical-align:-1px; }
   #tooltip { position:fixed; pointer-events:none; background:var(--surface);
@@ -76,7 +104,12 @@
   .console { display:flex; flex-direction:column; height:100%; min-height:430px; }
   .feed { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;
           padding-right:4px; }
+  .feed-empty { flex:1; display:flex; flex-direction:column; align-items:center;
+                justify-content:center; text-align:center; color:var(--muted);
+                font-size:13px; gap:6px; padding:20px; }
+  .feed-empty b { color:var(--ink2); font-size:14px; }
   .msg { border:1px solid var(--border); border-radius:10px; padding:8px 10px; }
+  .msg-conflict { border-color:rgba(250,178,25,0.7); background:rgba(250,178,25,0.08); }
   .msg .who { font-size:11px; color:var(--muted); margin-bottom:2px; }
   .msg .txt { font-size:13.5px; }
   .msg .parsed { margin-top:5px; font-size:11.5px; color:var(--ink2);
@@ -84,37 +117,61 @@
   .badge { display:inline-block; border-radius:6px; padding:1px 7px; font-size:10.5px;
            font-weight:600; margin-right:5px; border:1px solid var(--border); }
   .b-applied { color:var(--good); }
+  .b-conflict { color:#7a5c00; background:rgba(250,178,25,0.22);
+                border-color:rgba(250,178,25,0.7); }
   .b-clarify { color:#8a6d00; }
   .b-ignored { color:var(--muted); }
   .b-cleared { color:var(--us); }
   .b-memory  { color:#7c5cd6; }
   .msg .expl { margin-top:4px; font-size:12px; color:var(--ink2); font-style:italic; }
+  .msg-conflict .expl { color:#7a5c00; font-weight:500; }
   .quick { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
   .quick button { border:1px solid var(--border); background:transparent; color:var(--ink2);
                   border-radius:99px; padding:3px 10px; font-size:11.5px; cursor:pointer; }
+  .send-err { font-size:12px; color:var(--crit); margin:0 0 6px 2px; }
   .inputrow { display:flex; gap:8px; }
   .inputrow input { flex:1; border:1px solid var(--border); border-radius:10px;
                     padding:9px 12px; font-size:14px; background:var(--page);
                     color:var(--ink); }
   .inputrow button { border:0; background:var(--us); color:#fff; border-radius:10px;
                      padding:9px 16px; font-weight:600; cursor:pointer; }
+  .inputrow button:disabled { opacity:0.55; cursor:default; }
 </style>
 </head>
-<body class="viz-root">
+<body>
 <header>
   <h1>FeelsLike<span class="tag">Buildings that listen · Team Goldilocks</span></h1>
   <span class="pill">Sim clock <b id="clock">—</b></span>
   <span class="pill">Outdoor <b id="tout">—</b></span>
+  <span class="pill pill-stale" id="stale" hidden>reconnecting…</span>
   <div class="speed" id="speed">
     <button data-s="60">60×</button><button data-s="240" class="on">240×</button>
     <button data-s="960">960×</button>
   </div>
 </header>
 
+<div class="race">
+  <h2>The race <span class="right">same building, same weather — one listens</span></h2>
+  <div>
+    <div class="race-pct" id="pct">—</div>
+    <div class="race-pct-lbl">less energy than the building that doesn't listen</div>
+  </div>
+  <div class="race-track">
+    <div class="race-row">
+      <span class="race-name us">FeelsLike</span>
+      <div class="race-bar"><div class="race-fill us" id="bar-us"></div></div>
+      <span class="race-val" id="kwh-us">—</span>
+    </div>
+    <div class="race-row">
+      <span class="race-name">Baseline</span>
+      <div class="race-bar"><div class="race-fill base" id="bar-base"></div></div>
+      <span class="race-val" id="kwh-base">—</span>
+    </div>
+  </div>
+  <div class="race-comfort" id="comfort">Comfort violations: waiting for data…</div>
+</div>
+
 <div class="tiles">
-  <div class="tile"><div class="lbl">HVAC energy (this week)</div>
-    <div class="val" id="kwh-us">—</div>
-    <div class="sub">baseline <span id="kwh-base">—</span> · <span class="delta-good" id="pct">—</span></div></div>
   <div class="tile"><div class="lbl">Cost saved</div>
     <div class="val" id="rs">—</div><div class="sub">at ₹9 / kWh</div></div>
   <div class="tile"><div class="lbl">CO₂ avoided</div>
@@ -134,14 +191,14 @@
         <span><span class="chip" style="background:#2a78d6"></span>cold</span>
         <span><span class="chip" style="background:#f0efec;border:1px solid var(--grid)"></span>comfort band</span>
         <span><span class="chip" style="background:#e34948"></span>hot</span>
-        <span style="margin-left:auto">● = active complaint constraint</span>
+        <span style="margin-left:auto">dim = unoccupied · ● = active complaint</span>
       </div>
     </div>
     <div class="card" style="margin-top:12px">
       <h2>Cumulative HVAC energy <span class="right">kWh since Monday</span></h2>
       <div class="legend">
         <span><span class="chip" style="background:var(--us)"></span>FeelsLike</span>
-        <span><span class="chip" style="background:var(--base)"></span>Static 22 °C baseline</span>
+        <span><span class="chip" style="background:var(--baseline)"></span>Static 22 °C baseline</span>
       </div>
       <svg id="chart" viewBox="0 0 560 220" width="100%"></svg>
     </div>
@@ -149,13 +206,14 @@
 
   <div class="card console">
     <h2>Occupant channel <span class="right">type like a real human — sarcasm & Hinglish welcome</span></h2>
-    <div class="feed" id="feed"></div>
+    <div class="feed" id="feed" aria-live="polite"></div>
     <div class="quick" id="quick">
       <button>It's really stuffy in Conference Room B</button>
       <button>Room B is freezing, I'm wearing a jacket</button>
       <button>cabin mein bahut garmi hai yaar</button>
       <button>the projector in room b is broken</button>
     </div>
+    <div class="send-err" id="senderr" hidden>Couldn't reach the building. Your message is kept, try again.</div>
     <div class="inputrow">
       <input id="msg" placeholder="Tell the building how it feels…" autocomplete="off">
       <button id="send">Send</button>
@@ -166,22 +224,37 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const MID = 24.75;
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const MID = 24.75;  /* midpoint of the sim's 23.0–26.5 °C comfort band (sim/twin.py BAND) */
 const DIV = [[-2.5,'#104281'],[-1.5,'#2a78d6'],[-0.75,'#86b6ef'],[-0.25,'#cde2fb'],
              [0.25,'#f0efec'],[0.75,'#f6cdc8'],[1.5,'#ee968f'],[2.5,'#e34948'],[99,'#b02a2a']];
 const tempColor = t => { const d=t-MID; for (const [lim,c] of DIV) if (d<=lim) return c; return '#b02a2a'; };
 const inkFor = c => ['#104281','#2a78d6','#e34948','#b02a2a'].includes(c) ? '#ffffff' : '#0b0b0b';
+const mix = (a,b,t) => { const pa=parseInt(a.slice(1),16), pb=parseInt(b.slice(1),16);
+  const ch=i=>Math.round((pa>>i&255)*(1-t)+(pb>>i&255)*t);
+  return '#'+[16,8,0].map(i=>ch(i).toString(16).padStart(2,'0')).join(''); };
 const LAYOUT = { zone_a:[8,8,260,210], zone_b:[276,8,176,120], zone_c:[276,136,176,82],
                  zone_d:[8,226,200,140], zone_e:[216,226,236,140] };
-let state=null, tableMode=false;
+let state=null, tableMode=false, conflictSet=new Set();
+
+const zname = id => state?.zones.find(z=>z.id===id)?.name ?? (id ?? '?');
 
 function drawFloor(zones){
   const svg=$('floor'); let s='';
   for (const z of zones){
-    const [x,y,w,h]=LAYOUT[z.id], fill=tempColor(z.temp), ink=inkFor(fill);
+    const [x,y,w,h]=LAYOUT[z.id];
+    const occupied = z.occ > 0;
+    const base = tempColor(z.temp);
+    const fill = occupied ? base : mix(base, '#f4f3ef', 0.6);
+    const ink = occupied ? inkFor(base) : '#52514e';
     s+=`<g><rect class="zone-rect" x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${fill}">
-        <title>${z.name}: ${z.temp}°C, setpoint ${z.setpoint??'off'}, ${z.occ} people</title></rect>
-      <text class="zone-name" x="${x+10}" y="${y+18}" fill="${ink}" opacity="0.85">${z.name}</text>
+        <title>${esc(z.name)}: ${z.temp}°C, setpoint ${z.setpoint??'off'}, ${z.occ} people${occupied?'':' (unoccupied)'}</title></rect>`;
+    if (conflictSet.has(z.id) && z.active_constraints > 1)
+      s+=`<rect x="${x+2}" y="${y+2}" width="${w-4}" height="${h-4}" rx="6" fill="none"
+           stroke="var(--warn)" stroke-width="3">
+           <animate attributeName="opacity" values="1;0.25;1" dur="1.2s" repeatCount="indefinite"/></rect>`;
+    s+=`<text class="zone-name" x="${x+10}" y="${y+18}" fill="${ink}" opacity="0.85">${esc(z.name)}</text>
       <text class="zone-temp" x="${x+10}" y="${y+42}" fill="${ink}">${z.temp.toFixed(1)}°</text>
       <text class="zone-meta" x="${x+10}" y="${y+58}" fill="${ink}" opacity="0.8">set ${z.setpoint==null?'—':z.setpoint.toFixed(1)}° · ${z.occ} ppl · fan ${z.vent}</text>`;
     if (z.offset) s+=`<text class="zone-meta" x="${x+10}" y="${y+72}" fill="${ink}" opacity="0.9">complaint offset ${z.offset>0?'+':''}${z.offset}°</text>`;
@@ -193,7 +266,7 @@ function drawFloor(zones){
 function drawTable(zones){
   $('tablewrap').innerHTML = `<table class="zones"><tr><th>Zone</th><th>Temp</th><th>Setpoint</th>
     <th>People</th><th>Fan</th><th>Offset</th><th>Constraints</th></tr>` +
-    zones.map(z=>`<tr><td>${z.name}</td><td>${z.temp.toFixed(1)} °C</td>
+    zones.map(z=>`<tr><td>${esc(z.name)}</td><td>${z.temp.toFixed(1)} °C</td>
       <td>${z.setpoint==null?'—':z.setpoint.toFixed(1)}</td><td>${z.occ}</td><td>${z.vent}</td>
       <td>${z.offset||0}</td><td>${z.active_constraints}</td></tr>`).join('')+'</table>';
 }
@@ -208,11 +281,11 @@ function drawChart(hist){
     s+=`<line x1="${L}" y1="${y}" x2="${L+pw}" y2="${y}" stroke="var(--grid)" stroke-width="1"/>
         <text x="${L-6}" y="${y+4}" text-anchor="end" font-size="10" fill="var(--muted)" style="font-variant-numeric:tabular-nums">${v.toFixed(0)}</text>`;}
   const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const step=Math.max(1,Math.round((tmax-tmin)/86400));
+  const step=Math.max(1, Math.ceil((tmax-tmin)/86400/7));  /* aim ≤7 labels: every day over a week */
   for(let d=Math.ceil(tmin/86400); d<=tmax/86400; d+=step){
     s+=`<text x="${X(d*86400)}" y="${H-8}" font-size="10" fill="var(--muted)" text-anchor="middle">${days[d%7]}</text>`;}
   const path=k=>hist.map((p,i)=>(i?'L':'M')+X(p.t).toFixed(1)+' '+Y(p[k]).toFixed(1)).join(' ');
-  s+=`<path d="${path('base')}" fill="none" stroke="var(--base)" stroke-width="2"/>`;
+  s+=`<path d="${path('base')}" fill="none" stroke="var(--baseline)" stroke-width="2"/>`;
   s+=`<path d="${path('us')}" fill="none" stroke="var(--us)" stroke-width="2"/>`;
   const last=hist[hist.length-1];
   s+=`<text x="${L+pw+6}" y="${Y(last.base)+4}" font-size="11" fill="var(--ink2)">Baseline</text>`;
@@ -227,7 +300,7 @@ function drawChart(hist){
     const xh=svg.querySelector('#xh'); xh.setAttribute('x1',X(best.t)); xh.setAttribute('x2',X(best.t));
     xh.setAttribute('visibility','visible');
     const tip=$('tooltip'); tip.style.display='block';
-    tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY-10)+'px';
+    tip.style.left=Math.min(e.clientX+14, innerWidth-190)+'px'; tip.style.top=(e.clientY-10)+'px';
     tip.innerHTML=`<b>${days[Math.floor(best.t/86400)%7]} ${String(Math.floor(best.t%86400/3600)).padStart(2,'0')}:00</b><br>
       FeelsLike ${best.us.toFixed(1)} kWh<br>Baseline ${best.base.toFixed(1)} kWh<br>
       <span class="delta-good">saved ${(best.base-best.us).toFixed(1)} kWh</span>`;
@@ -238,29 +311,55 @@ function tipHide(){ $('tooltip').style.display='none';
   const xh=document.querySelector('#xh'); if(xh) xh.setAttribute('visibility','hidden'); }
 
 function drawFeed(feed){
+  if(!feed.length){
+    $('feed').innerHTML=`<div class="feed-empty"><b>The building is listening.</b>
+      <span>No complaints yet. Try a chip below, or type how you feel.<br>
+      Watch it parse, act, and explain itself.</span></div>`;
+    return;
+  }
   $('feed').innerHTML = feed.map(f=>{
     const p=f.parsed||{};
-    const cls=f.action==='applied'?'b-applied'
+    const isConflict = !!(f.explanation && f.explanation.conflict);
+    const cls=isConflict?'b-conflict'
+      :f.action==='applied'?'b-applied'
       :f.action?.startsWith('clarify')?'b-clarify'
       :f.action?.startsWith('all-clear')?'b-cleared'
       :f.action?.startsWith('pre-applied')?'b-memory':'b-ignored';
-    return `<div class="msg"><div class="who">${f.author} · ${f.sim_clock} · ${f.latency_ms} ms · ${f.source}</div>
-      <div class="txt">${f.text}</div>
-      <div class="parsed"><span class="badge ${cls}">${(f.action||'').split(' ')[0]}</span>
-        ${p.is_comfort_complaint?`zone=<b>${p.zone_id??'?'}</b> · issue=<b>${p.issue}</b> · sev ${p.severity} · conf ${(p.confidence??0).toFixed(2)}`:'not a comfort complaint'}</div>
-      ${f.explanation?`<div class="expl">${f.explanation.summary}</div>`:''}
-      ${f.action?.startsWith('clarify')?`<div class="expl">${f.action.slice(10)}</div>`:''}</div>`;
+    const badgeText=isConflict?'CONFLICT':esc((f.action||'').split(' ')[0]);
+    return `<div class="msg${isConflict?' msg-conflict':''}">
+      <div class="who">${esc(f.author)} · ${esc(f.sim_clock)} · ${f.latency_ms} ms · ${esc(f.source)}</div>
+      <div class="txt">${esc(f.text)}</div>
+      <div class="parsed"><span class="badge ${cls}">${badgeText}</span>
+        ${p.is_comfort_complaint
+          ? `<b>${esc(zname(p.zone_id))}</b> · ${esc((p.issue||'other').replace(/_/g,' '))} · severity ${p.severity}/3 · confidence ${Math.round((p.confidence??0)*100)}%`
+          : 'not a comfort complaint'}</div>
+      ${f.explanation?`<div class="expl">${esc(f.explanation.summary)}</div>`:''}
+      ${f.action?.startsWith('clarify')?`<div class="expl">${esc(f.action.slice(10))}</div>`:''}</div>`;
   }).join('');
 }
 
+function setSpeedButtons(sp){
+  document.querySelectorAll('.speed button').forEach(b=>b.classList.toggle('on', +b.dataset.s===sp));
+}
+
+let sending=false;
 async function send(text){
-  $('msg').value='';
-  const r=await fetch('/api/complaint',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({text, author:'you'})});
-  const j=await r.json();
-  $('latency').textContent=j.latency_ms+' ms';
-  $('parse-src').textContent='parser: '+j.source+(j.source==='rules'?' (offline fallback)':'');
-  await tick();
+  if(sending) return;
+  sending=true; $('send').disabled=true; $('senderr').hidden=true;
+  try{
+    const r=await fetch('/api/complaint',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text, author:'you'})});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j=await r.json();
+    $('msg').value='';                 /* clear only after the building heard it */
+    $('latency').textContent=j.latency_ms+' ms';
+    $('parse-src').textContent='parser: '+j.source+(j.source==='rules'?' (offline fallback)':'');
+    await tick();
+  }catch(e){
+    $('senderr').hidden=false;         /* input text is preserved for retry */
+  }finally{
+    sending=false; $('send').disabled=false;
+  }
 }
 $('send').onclick=()=>{const v=$('msg').value.trim(); if(v) send(v);};
 $('msg').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=$('msg').value.trim(); if(v) send(v);}});
@@ -271,29 +370,53 @@ $('viewToggle').onclick=()=>{tableMode=!tableMode;
   $('viewToggle').textContent=tableMode?'floor plan':'table view';};
 $('speed').addEventListener('click',async e=>{
   if(e.target.tagName!=='BUTTON')return;
-  document.querySelectorAll('.speed button').forEach(b=>b.classList.remove('on'));
-  e.target.classList.add('on');
-  await fetch('/api/speed',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({speed:+e.target.dataset.s})});
+  try{
+    const r=await fetch('/api/speed',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({speed:+e.target.dataset.s})});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    setSpeedButtons((await r.json()).speed);   /* reflect the speed the sim confirmed */
+  }catch(err){ /* buttons stay on the sim's real speed via tick() */ }
 });
 
+let failedTicks=0;
 async function tick(){
   try{
     const s=await (await fetch('/api/state')).json(); state=s;
+    failedTicks=0; $('stale').hidden=true; document.body.classList.remove('stale');
     $('clock').textContent=s.sim.clock;
     $('tout').textContent=s.sim.t_out.toFixed(1)+' °C';
-    $('kwh-us').textContent=s.meters.us.kwh.toFixed(1)+' kWh';
-    $('kwh-base').textContent=s.meters.base.kwh.toFixed(1)+' kWh';
-    $('pct').textContent='−'+s.meters.saved_pct.toFixed(1)+'%';
+    setSpeedButtons(s.sim.speed);
+
+    /* the race */
+    const us=s.meters.us.kwh, base=s.meters.base.kwh;
+    $('kwh-us').textContent=us.toFixed(1)+' kWh';
+    $('kwh-base').textContent=base.toFixed(1)+' kWh';
+    if(base>0.5){
+      $('pct').textContent='−'+s.meters.saved_pct.toFixed(1)+'%';
+      $('bar-base').style.transform='scaleX(1)';
+      $('bar-us').style.transform='scaleX('+(us/base).toFixed(3)+')';
+    }
+    const vUs=Math.round(s.meters.us.viol_min), vBase=Math.round(s.meters.base.viol_min);
+    $('comfort').innerHTML=`Comfort violations: <b class="c-good">${vUs.toLocaleString('en-IN')} min</b> FeelsLike
+      · <b class="c-crit">${vBase.toLocaleString('en-IN')} min</b> baseline. Savings without sacrifice.`;
+
     $('rs').textContent='₹'+s.meters.saved_rs.toLocaleString('en-IN');
     $('co2').textContent=s.meters.saved_co2.toFixed(1)+' kg';
+
+    /* zones with an unresolved conflict (opposing constraints still active) */
+    conflictSet=new Set(s.feed.filter(f=>f.explanation?.conflict && f.parsed?.zone_id)
+                              .map(f=>f.parsed.zone_id));
     tableMode?drawTable(s.zones):drawFloor(s.zones);
     drawChart(s.history); drawFeed(s.feed);
-    if (s.feed.length && $('latency').textContent==='—'){
+
+    if (s.feed.length){                 /* stays current even for Slack-sent complaints */
       $('latency').textContent=s.feed[0].latency_ms+' ms';
-      $('parse-src').textContent='parser: '+s.feed[0].source;
+      $('parse-src').textContent='parser: '+s.feed[0].source
+        +(s.feed[0].source==='rules'?' (offline fallback)':'');
     }
-  }catch(e){ /* backend restarting */ }
+  }catch(e){
+    if(++failedTicks>=3){ $('stale').hidden=false; document.body.classList.add('stale'); }
+  }
 }
 tick(); setInterval(tick, 1000);
 </script>

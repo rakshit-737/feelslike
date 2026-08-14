@@ -9,38 +9,20 @@
     },
     "heldout": {
       "n": 20,
-      "det": 12,
-      "zone": 18,
-      "issue": 14,
-      "triple": 11
+      "det": 15,
+      "zone": 17,
+      "issue": 16,
+      "triple": 12
     }
   },
   "total": {
     "n": 50,
-    "det": 42,
-    "zone": 48,
-    "issue": 44,
-    "triple": 41
+    "det": 45,
+    "zone": 47,
+    "issue": 46,
+    "triple": 42
   },
   "failures": [
-    {
-      "text": "its friezing in the confrence room",
-      "split": "heldout",
-      "gold": {
-        "is_comfort_complaint": true,
-        "zone_id": "zone_b",
-        "issue": "too_cold"
-      },
-      "got": {
-        "is_comfort_complaint": false,
-        "zone_id": null,
-        "issue": "other",
-        "severity": 1,
-        "confidence": 0.6,
-        "reasoning": "Rules: no comfort keyword matched."
-      },
-      "source": "rules"
-    },
     {
       "text": "love how I need gloves to type in the open office",
       "split": "heldout",
@@ -78,6 +60,24 @@
       "source": "rules"
     },
     {
+      "text": "both the lobby and the cafeteria are boiling today",
+      "split": "heldout",
+      "gold": {
+        "is_comfort_complaint": true,
+        "zone_id": "zone_d",
+        "issue": "too_hot"
+      },
+      "got": {
+        "is_comfort_complaint": true,
+        "zone_id": null,
+        "issue": "too_hot",
+        "severity": 2,
+        "confidence": 0.92,
+        "reasoning": "Multiple zones mentioned with a clear heat complaint."
+      },
+      "source": "llm"
+    },
+    {
       "text": "to hot in the caben",
       "split": "heldout",
       "gold": {
@@ -104,14 +104,14 @@
         "issue": "other"
       },
       "got": {
-        "is_comfort_complaint": true,
-        "zone_id": null,
-        "issue": "too_hot",
+        "is_comfort_complaint": false,
+        "zone_id": "zone_e",
+        "issue": "other",
         "severity": 1,
-        "confidence": 0.55,
-        "reasoning": "Rules-based keyword match."
+        "confidence": 0.8,
+        "reasoning": "Equipment issue, not thermal comfort, possibly near Cafeteria E."
       },
-      "source": "rules"
+      "source": "llm"
     },
     {
       "text": "open office AC ki hawa direct desk pe aa rahi hai",
@@ -124,24 +124,6 @@
       "got": {
         "is_comfort_complaint": false,
         "zone_id": "zone_a",
-        "issue": "other",
-        "severity": 1,
-        "confidence": 0.6,
-        "reasoning": "Rules: no comfort keyword matched."
-      },
-      "source": "rules"
-    },
-    {
-      "text": "should have brought my winter coat to the lobby today",
-      "split": "heldout",
-      "gold": {
-        "is_comfort_complaint": true,
-        "zone_id": "zone_d",
-        "issue": "too_cold"
-      },
-      "got": {
-        "is_comfort_complaint": false,
-        "zone_id": "zone_d",
         "issue": "other",
         "severity": 1,
         "confidence": 0.6,
