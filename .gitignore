@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+
+# local tooling / editor state
+.claude/
+.opencode/
+
+# training noise (models + progress.csv are committed)
+rl/train_log.txt

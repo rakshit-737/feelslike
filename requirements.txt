@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+pydantic>=2
+httpx
+python-dotenv
+python-multipart   # Slack slash-command form parsing (/api/slack)
+
+# --- core sim has NO heavy deps; the above is all you need for the demo ---
+
+# RL track only (large downloads — install when you start rl/train.py):
+# stable-baselines3>=2.3
+# torch
+gymnasium

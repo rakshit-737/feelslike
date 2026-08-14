@@ -1,0 +1,42 @@
+{
+  "days": 7,
+  "seed": 7,
+  "results": {
+    "Static 22degC schedule (baseline)": {
+      "kwh": 722.42,
+      "cost_rs": 6501.8,
+      "co2_kg": 512.92,
+      "viol_min": 16328.0,
+      "hot_deg_min": 417.9,
+      "cold_deg_min": 15973.1,
+      "saved_pct_vs_baseline": 0.0
+    },
+    "Reactive thermostat 24degC": {
+      "kwh": 493.41,
+      "cost_rs": 4440.7,
+      "co2_kg": 350.32,
+      "viol_min": 429.0,
+      "hot_deg_min": 1280.7,
+      "cold_deg_min": 0.0,
+      "saved_pct_vs_baseline": 31.7
+    },
+    "FeelsLike (constraint-aware)": {
+      "kwh": 530.32,
+      "cost_rs": 4772.9,
+      "co2_kg": 376.53,
+      "viol_min": 0.0,
+      "hot_deg_min": 0.0,
+      "cold_deg_min": 0.0,
+      "saved_pct_vs_baseline": 26.6
+    },
+    "FeelsLike (PPO agent)": {
+      "kwh": 512.67,
+      "cost_rs": 4614.0,
+      "co2_kg": 363.99,
+      "viol_min": 22.0,
+      "hot_deg_min": 3.3,
+      "cold_deg_min": 0.0,
+      "saved_pct_vs_baseline": 29.0
+    }
+  }
+}
