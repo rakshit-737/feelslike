@@ -53,7 +53,6 @@ exact three lines. **No key needed** — the offline rules parser keeps the whol
 demo functional (that's your demo-day insurance).
 
 ## What's where
-
 | Path | What it is |
 |---|---|
 | `IMPLEMENTATION.md` | **Read this first** — the full build plan, milestones, and demo script |
