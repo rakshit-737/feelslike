@@ -1,4 +1,4 @@
-# FeelsLike — Buildings That Listen
+# FeelsLike, Buildings That Listen
 
 Team Goldilocks · Hackathon problem statement: **Digital Twin Building Optimizer with NLP Feedback**
 
