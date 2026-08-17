@@ -96,6 +96,11 @@ def load():
     nlp_rules = json.loads((ROOT / "evals/results_nlp.json").read_text())
     llm_path = ROOT / "evals/results_nlp_llm.json"
     nlp_llm = json.loads(llm_path.read_text()) if llm_path.exists() else None
+    blind_path = ROOT / "evals/results_blind.json"
+    globals()["BLIND"] = json.loads(blind_path.read_text()) if blind_path.exists() else None
+    blind_llm_path = ROOT / "evals/results_blind_llm.json"
+    globals()["BLIND_LLM"] = (json.loads(blind_llm_path.read_text())
+                              if blind_llm_path.exists() else None)
     rows = list(csv.DictReader(open(ROOT / "rl/models/progress.csv")))
     key = "rollout/ep_rew_mean"
     curve = [(int(r["time/total_timesteps"]), float(r[key])) for r in rows if r.get(key)]
@@ -119,9 +124,12 @@ def main():
 
     energy_svg = bar_chart([
         ("Static 22 °C (today's default)", static["kwh"], GRAY_BAR, f'{static["kwh"]:.0f} kWh', INK2),
-        ("Reactive thermostat 24 °C", react["kwh"], GRAY_BAR, f'{react["kwh"]:.0f} kWh · −31.7%', INK2),
-        ("FeelsLike (rules, demo)", rules["kwh"], BLUE, f'{rules["kwh"]:.0f} kWh · −26.6%', BLUE),
-        ("FeelsLike (PPO agent)", ppo["kwh"], BLUE_LT, f'{ppo["kwh"]:.0f} kWh · −29.0%', INK2),
+        ("Reactive thermostat 24 °C", react["kwh"], GRAY_BAR,
+         f'{react["kwh"]:.0f} kWh · −{react["saved_pct_vs_baseline"]}%', INK2),
+        ("FeelsLike (rules, demo)", rules["kwh"], BLUE,
+         f'{rules["kwh"]:.0f} kWh · −{rules["saved_pct_vs_baseline"]}%', BLUE),
+        ("FeelsLike (PPO agent)", ppo["kwh"], BLUE_LT,
+         f'{ppo["kwh"]:.0f} kWh · −{ppo["saved_pct_vs_baseline"]}%', INK2),
     ], "HVAC electricity, 7 simulated days, identical weather")
 
     viol_svg = bar_chart([
@@ -133,22 +141,131 @@ def main():
 
     curve_svg = curve_chart(curve)
 
-    r_dev, r_ho = nlp_rules["splits"]["dev"], nlp_rules["splits"]["heldout"]
+    # Held-out is aggregated across every heldout* split. The benchmark grew a
+    # second held-out block; quoting only the first one would report a subset of
+    # the evidence while the totals table counted all of it.
+    def merge_heldout(splits: dict) -> dict:
+        parts = [v for k, v in splits.items() if k.startswith("heldout")]
+        keys = ("n", "det", "zone", "issue", "triple")
+        return {k: sum(p.get(k, 0) for p in parts) for k in keys}
+
+    r_dev, r_ho = nlp_rules["splits"]["dev"], merge_heldout(nlp_rules["splits"])
+    dev_n, ho_n = r_dev["n"], r_ho["n"]
+    bench_n = dev_n + ho_n
     if nlp_llm:
-        l_dev, l_ho = nlp_llm["splits"]["dev"], nlp_llm["splits"]["heldout"]
+        l_dev, l_ho = nlp_llm["splits"]["dev"], merge_heldout(nlp_llm["splits"])
+        ld_n, lh_n = l_dev["n"], l_ho["n"]
         llm_cols = f"""
-        <tr><td>Complaint detection</td><td>{pct(r_dev['det'],30)}</td><td>{pct(r_ho['det'],20)}</td>
-            <td>{pct(l_dev['det'],30)}</td><td class="hl">{pct(l_ho['det'],20)}</td></tr>
-        <tr><td>Zone extraction</td><td>{pct(r_dev['zone'],30)}</td><td>{pct(r_ho['zone'],20)}</td>
-            <td>{pct(l_dev['zone'],30)}</td><td class="hl">{pct(l_ho['zone'],20)}</td></tr>
-        <tr><td>Issue extraction</td><td>{pct(r_dev['issue'],30)}</td><td>{pct(r_ho['issue'],20)}</td>
-            <td>{pct(l_dev['issue'],30)}</td><td class="hl">{pct(l_ho['issue'],20)}</td></tr>
-        <tr><td><b>Exact triple</b></td><td><b>{pct(r_dev['triple'],30)}</b></td><td><b>{pct(r_ho['triple'],20)}</b></td>
-            <td><b>{pct(l_dev['triple'],30)}</b></td><td class="hl"><b>{pct(l_ho['triple'],20)}</b></td></tr>"""
-        llm_head = "<th>Rules · dev</th><th>Rules · held-out</th><th>LLM · dev</th><th>LLM · held-out</th>"
+        <tr><td>Complaint detection</td><td>{pct(r_dev['det'],dev_n)}</td><td>{pct(r_ho['det'],ho_n)}</td>
+            <td>{pct(l_dev['det'],ld_n)}</td><td class="hl">{pct(l_ho['det'],lh_n)}</td></tr>
+        <tr><td>Zone extraction</td><td>{pct(r_dev['zone'],dev_n)}</td><td>{pct(r_ho['zone'],ho_n)}</td>
+            <td>{pct(l_dev['zone'],ld_n)}</td><td class="hl">{pct(l_ho['zone'],lh_n)}</td></tr>
+        <tr><td>Issue extraction</td><td>{pct(r_dev['issue'],dev_n)}</td><td>{pct(r_ho['issue'],ho_n)}</td>
+            <td>{pct(l_dev['issue'],ld_n)}</td><td class="hl">{pct(l_ho['issue'],lh_n)}</td></tr>
+        <tr><td><b>Exact triple</b></td><td><b>{pct(r_dev['triple'],dev_n)}</b></td><td><b>{pct(r_ho['triple'],ho_n)}</b></td>
+            <td><b>{pct(l_dev['triple'],ld_n)}</b></td><td class="hl"><b>{pct(l_ho['triple'],lh_n)}</b></td></tr>"""
+        llm_head = (f"<th>Rules · dev ({dev_n})</th><th>Rules · held-out ({ho_n})</th>"
+                    f"<th>LLM · dev ({ld_n})</th><th>LLM · held-out ({lh_n})</th>")
     else:
-        llm_head = "<th>Rules · dev</th><th>Rules · held-out</th>"
+        llm_head = f"<th>Rules · dev ({dev_n})</th><th>Rules · held-out ({ho_n})</th>"
         llm_cols = ""  # rules-only fallback, not expected in practice
+
+    blind = globals().get("BLIND")
+    blind_llm = globals().get("BLIND_LLM")
+    ho_triple_pct = round(100 * r_ho["triple"] / ho_n) if ho_n else 0
+    blind_fails, parser_verdict = "", ""
+    if blind:
+        p = blind["pct"]
+        cats = blind.get("by_category", {})
+        worst = sorted((c for c in cats.items() if c[1]["triple"] < c[1]["n"]))
+        lp = (blind_llm or {}).get("pct")
+
+        def two_col(metric: str, key: str, meaning: str, hl: bool = False) -> str:
+            cls = ' class="hl"' if hl else ""
+            llm_cell = f"<td><b>{lp[key]}%</b></td>" if lp else ""
+            return (f"<tr><td>{metric}</td><td{cls}><b>{p[key]}%</b></td>{llm_cell}"
+                    f"<td>{meaning}</td></tr>")
+
+        llm_th = f"<th>LLM · Groq</th>" if lp else ""
+        blind_block = f"""
+<h3>The blind probe: what the parser scores on language it has never seen</h3>
+<p>
+A held-out split stops being held out the moment someone debugs against it. Ours did:
+after a parser rewrite the held-out exact-triple score read <b>{ho_triple_pct}%</b>, which
+measures how thoroughly those specific sentences were fixed, not how well the parser
+generalizes. So we keep a second set, <span class="mono">evals/blind_probe.json</span>, that
+is never used for tuning — if a case in it ever informs a fix, that case is retired and replaced.
+</p>
+<table>
+<tr><th>Metric ({blind['n']} unseen cases)</th><th>Rules parser</th>{llm_th}<th>What it means</th></tr>
+{two_col("Zone extraction (exact set)", "zoneset",
+         "Naming the right room is close to solved, including multi-zone and Hinglish.", hl=True)}
+{two_col("Complaint detection", "det",
+         "Deciding <i>whether</i> a message is a complaint at all is the weak axis.")}
+{two_col("Issue extraction", "issue",
+         "Novel metaphors and inverted sarcasm still land on the wrong issue.")}
+{two_col("<b>Exact triple</b>", "triple",
+         "All three correct. This is the number to quote, not the tuned split's.")}
+</table>
+<p class="figcap">Categories still failing on unseen input:
+{', '.join(c for c, _v in worst) if worst else 'none'}.</p>
+<div class="callout">
+<b>Why publish the lower number?</b> Because the difference between the tuned split's
+{ho_triple_pct}% and the probe's {p['triple']}% <i>is</i> the finding. It quantifies how much
+of a held-out score survives contact with genuinely new phrasing, and it is the only NLP
+number this report quotes as generalization.
+</div>
+"""
+        # Failures are quoted from the probe run rather than remembered, so the
+        # examples can never describe a defect that has since been fixed.
+        rows = []
+        for f in (blind.get("failures") or [])[:6]:
+            missed = ", ".join(f.get("missed", [])) or "exact triple"
+            rows.append(f'  <li><i>"{f["text"]}"</i> — <span class="mono">'
+                        f'{f.get("category", "uncategorised")}</span>; missed {missed}.</li>')
+        blind_fails = ("<ul>\n" + "\n".join(rows) + "\n</ul>") if rows else \
+            "<p>No case in the current probe fails outright.</p>"
+
+        # The rules-vs-LLM verdict is COMPUTED. An earlier revision asserted the
+        # LLM path was the product; the probe now measures the opposite, and a
+        # hand-written conclusion is exactly the kind of claim that goes stale.
+        if lp:
+            wins = [k for k in ("zoneset", "det", "issue", "triple") if p[k] > lp[k]]
+            losses = [k for k in ("zoneset", "det", "issue", "triple") if p[k] < lp[k]]
+            if p["triple"] > lp["triple"]:
+                parser_verdict = (
+                    f"<b>The rules path is not just insurance.</b> On {blind['n']} unseen cases the "
+                    f"staged rules parser scores {p['triple']}% exact triple against the hosted "
+                    f"LLM's {lp['triple']}%, leading on {len(wins)} of 4 axes and trailing on "
+                    f"{len(losses)}. The runtime still prefers the LLM whenever an API key is "
+                    f"present (rules are the no-key, no-Wi-Fi path), so this result is a live "
+                    f"argument against that default rather than a description of it: on unseen "
+                    f"phrasing the component we wrote generalizes better than the model we "
+                    f"called, and the probe is what makes that visible instead of assumed.")
+            else:
+                parser_verdict = (
+                    f"<b>The LLM path is the product, the rules are the insurance.</b> On "
+                    f"{blind['n']} unseen cases the LLM scores {lp['triple']}% exact triple "
+                    f"against the rules parser's {p['triple']}%: the keyword ceiling on unseen "
+                    f"phrasing is structural, while the LLM path improves with model quality at "
+                    f"zero code change. The rules parser keeps the demo alive offline, and at "
+                    f"{p['zoneset']}% zone accuracy it does that well.")
+        else:
+            parser_verdict = (
+                f"<b>{p['triple']}% exact triple on {blind['n']} unseen cases.</b> Zone extraction "
+                f"({p['zoneset']}%) is close to solved; complaint detection ({p['det']}%) is the "
+                f"weak axis, and it is the one that decides whether a constraint is filed at all.")
+    else:
+        blind_block = ""
+        blind_fails = ""
+        parser_verdict = ""
+
+    limit_parser = (
+        f"{blind['pct']['triple']}% exact-triple on the {blind['n']}-case blind probe (§8); "
+        f"complaint detection ({blind['pct']['det']}%) fails before zone extraction "
+        f"({blind['pct']['zoneset']}%) does. Benchmarked and shown, not estimated."
+        if blind else
+        "Measured on the held-out split only; no blind probe has been run for this build.")
 
     html = TEMPLATE
     for k, v in {
@@ -157,6 +274,16 @@ def main():
         "@@CURVE_CHART@@": curve_svg,
         "@@NLP_HEAD@@": llm_head,
         "@@NLP_ROWS@@": llm_cols,
+        "@@BLIND@@": blind_block,
+        "@@BLIND_FAILS@@": blind_fails,
+        "@@PARSER_VERDICT@@": parser_verdict,
+        "@@LIMIT_PARSER@@": limit_parser,
+        "@@BENCH_N@@": str(bench_n),
+        "@@DEV_N@@": str(dev_n),
+        "@@HO_N@@": str(ho_n),
+        "@@BENCH_LABEL@@": (f"case NLP benchmark, plus a {blind['n']}-case blind probe the "
+                            f"parser was never tuned on" if blind else
+                            "case NLP benchmark with a held-out split"),
     }.items():
         html = html.replace(k, v)
 
@@ -235,7 +362,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   <div class="statband">
     <div class="stat"><div class="v good">−26.6%</div><div class="l">HVAC energy vs the static schedule buildings run today (7 simulated days)</div></div>
     <div class="stat"><div class="v good">0 min</div><div class="l">comfort violations — vs 16,328 min for the baseline over the same week</div></div>
-    <div class="stat"><div class="v">50</div><div class="l">case NLP benchmark with a held-out split the parser was never tuned on</div></div>
+    <div class="stat"><div class="v">@@BENCH_N@@</div><div class="l">@@BENCH_LABEL@@</div></div>
     <div class="stat"><div class="v">2M</div><div class="l">PPO training steps on the twin; ablation-tested against 3 baselines</div></div>
   </div>
   <h3>Contents</h3>
@@ -561,41 +688,32 @@ run may flip the decision. We would rather show a zero than 1.9 kWh.
 <section>
 <h2>8 · NLP benchmark: methodology &amp; honest numbers</h2>
 <p>
-The benchmark is 50 labeled cases scoring three things per message: complaint detection
+The benchmark is @@BENCH_N@@ labeled cases scoring three things per message: complaint detection
 (is this a comfort complaint at all?), zone extraction, and issue extraction. "Exact
 triple" requires all three correct.
 </p>
 <p>
-<b>The split is the methodology.</b> The 30-case <i>dev</i> set is what the rules parser
-was tuned on — its 100% there is table stakes, not evidence. The 20-case <i>held-out</i>
-set was written after the rules were frozen and never used for tuning: typos ("its friezing
+<b>The split is the methodology.</b> The @@DEV_N@@-case <i>dev</i> set is what the rules parser
+was tuned on — its score there is table stakes, not evidence. The @@HO_N@@-case <i>held-out</i>
+set was written after the rules were frozen: typos ("its friezing
 in the confrence room"), sarcasm ("love how I need gloves to type"), Hinglish variants,
 multi-zone messages, retractions with keyword traps, and negatives designed to fool keyword
-matching ("the coffee machine is steaming hot again"). Held-out numbers are the honest ones.
+matching ("the coffee machine is steaming hot again"). Those cases were later debugged
+against, which is what retired them as a generalization measure — see the blind probe below.
 </p>
 <table>
 <tr><th>Metric</th>@@NLP_HEAD@@</tr>
 @@NLP_ROWS@@
 </table>
-<p class="figcap">LLM = Llama 3.3 70B via Groq free tier through the schema-validated prompt; identical guardrails on both parsers.</p>
+<p class="figcap">LLM = Llama 3.3 70B via Groq free tier through the schema-validated prompt; identical guardrails on both parsers.
+Read these split scores as development progress, not as generalization — the section below explains why.</p>
 
-<h3>What still fails (held-out examples, shown as measured)</h3>
-<ul>
-  <li><i>"open office AC ki hawa direct desk pe aa rahi hai"</i> — Hinglish draft phrasing;
-      both parsers miss <code>drafty</code>.</li>
-  <li><i>"love how I need gloves to type in the open office"</i> — pure sarcasm with no
-      temperature keyword; both parsers miss the complaint.</li>
-  <li><i>"did you see how hot it is outside today? 40 degrees"</i> — weather small-talk;
-      the LLM (and rules) still read it as a heat complaint.</li>
-  <li><i>"both the lobby and the cafeteria are boiling"</i> — multi-zone; the schema carries
-      one zone, a disclosed structural limitation.</li>
-</ul>
+@@BLIND@@
+
+<h3>What still fails (blind-probe cases, quoted as measured)</h3>
+@@BLIND_FAILS@@
 <div class="callout">
-The gap between 100% (dev) and ~55–60% (held-out) is precisely <b>why the LLM parser is
-the product and the rules are the insurance</b>: the rules ceiling on unseen phrasing is
-structural, while the LLM path improves with model quality at zero code change. We report
-the gap rather than hiding the held-out set because a benchmark you can't fail isn't a
-benchmark.
+@@PARSER_VERDICT@@
 </div>
 </section>
 
@@ -669,8 +787,9 @@ wherever we show it.</p>
   <li><b>"In simulation."</b> The zero-violation result holds because HVAC sizing is
       adequate in the model. Real buildings have undersized units and thermal surprises;
       the claim on stage is always "in simulation".</li>
-  <li><b>Parser held-out ceiling.</b> ~55–60% exact-triple on adversarial held-out phrasing
-      (§8). Multi-zone complaints carry one zone. Both are benchmarked and shown.</li>
+  <li><b>Parser ceiling on unseen phrasing.</b> @@LIMIT_PARSER@@</li>
+  <li><b>Multi-zone complaints.</b> A message naming two rooms still ends up as a
+      single-zone constraint downstream; disclosed rather than worked around.</li>
   <li><b>RL not yet shipping.</b> The PPO agent trades 2 viol-min for 2.8 kWh/day; below
       our bar (§7).</li>
   <li><b>Synthetic weather/occupancy.</b> Deterministic by design for fair A/B; the
@@ -721,7 +840,7 @@ wherever we show it.</p>
 <tr><td class="mono">backend/memory.py</td><td>Comfort memory: recurring-pattern mining and pre-application</td></tr>
 <tr><td class="mono">backend/app.py</td><td>FastAPI: lock-step A/B sim, complaint API, Slack/Teams webhook, dashboard</td></tr>
 <tr><td class="mono">dashboard/index.html</td><td>Single-file live dashboard (race, floor plan, occupant channel)</td></tr>
-<tr><td class="mono">evals/</td><td>50-case benchmark (dev/held-out splits), runner, result JSONs</td></tr>
+<tr><td class="mono">evals/</td><td>@@BENCH_N@@-case benchmark (dev/held-out splits) + the blind probe, runners, result JSONs</td></tr>
 <tr><td class="mono">rl/train.py · rl/evaluate.py</td><td>PPO training (VecMonitor curves) and ablation</td></tr>
 <tr><td class="mono">scripts/demo_day.py</td><td>7-day controller comparison → results JSON (the evidence table)</td></tr>
 <tr><td class="mono">scripts/build_report.py</td><td>This document</td></tr>
@@ -730,6 +849,7 @@ wherever we show it.</p>
 <pre>python -m scripts.demo_day                 # Figures 1–2 and the §6 table
 python -m evals.run_nlp_eval --rules       # §8 rules columns (offline)
 python -m evals.run_nlp_eval               # §8 LLM columns (needs a key; free via Groq)
+python -m evals.run_blind_probe --rules    # §8 blind probe (the quoted generalization number)
 python -m rl.train --steps 2000000         # Figure 3 (rl/models/progress.csv)
 python -m rl.evaluate --episodes 10        # §7 ablation table
 uvicorn backend.app:app --reload           # the live demo, http://127.0.0.1:8000</pre>

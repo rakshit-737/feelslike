@@ -11,3 +11,9 @@ __pycache__/
 rl/train_log.txt
 .opencode
 .impeccable/
+
+# generated / transient doc artifacts
+docs/*.backup.pptx
+docs/~$*
+__pycache__/
+.pytest_cache/

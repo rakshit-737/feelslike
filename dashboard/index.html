@@ -16,6 +16,52 @@
   body { background:var(--page); color:var(--ink);
          font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif; padding:16px; }
   header { display:flex; align-items:baseline; gap:14px; margin-bottom:14px; flex-wrap:wrap; }
+
+  /* ---- shell: the top bar sticks so the simulation marker and the tabs are
+         never scrolled away. Negative margins cancel body padding, so at scroll 0
+         nothing moves when it starts sticking. z-index stays under #tooltip (5). */
+  .topbar { position:sticky; top:0; z-index:4; background:var(--page);
+            margin:-16px -16px 12px; padding:16px 16px 0;
+            border-bottom:1px solid var(--border); }
+  .topbar header { margin-bottom:9px; }
+
+  /* The brief demands a permanent, unmissable honesty marker. Calm, not alarming:
+     neutral surface, one amber dot, plain words — it states a fact, not a fault. */
+  .simbadge { display:inline-flex; align-items:center; gap:7px; background:var(--surface);
+              border:1px solid var(--border); border-radius:99px; padding:3px 11px;
+              font-size:11.5px; color:var(--ink2); white-space:nowrap; cursor:help; }
+  .simbadge .dot { width:7px; height:7px; border-radius:99px; background:var(--warn);
+                   flex:none; }
+  .simbadge b { color:var(--ink); font-weight:600; letter-spacing:0.04em; }
+
+  /* 11 tabs is too many equal choices. Row one is the pitch path (Overview,
+     Live twin, Explain, What-if, Demo) — the five a presenter walks through.
+     Row two is the depth a judge digs into on request, deliberately quieter so
+     it reads as "more", not as ten forgotten options. One tablist, two rows;
+     the pinned key order is preserved *within* each row, and the panel sections
+     below stay in the pinned order exactly. */
+  nav#tabs { display:flex; flex-direction:column; gap:5px; padding-bottom:9px; }
+  .tabrow { display:flex; align-items:center; gap:4px; flex-wrap:wrap; min-width:0; }
+  #tabs button { font:inherit; cursor:pointer; background:transparent; color:var(--ink2);
+                 border:1px solid transparent; border-radius:8px; }
+  #tabs button:hover { color:var(--ink); }
+  #tabs button:focus-visible { outline:2px solid var(--us); outline-offset:2px; }
+  #tabs .tabrow-primary button { font-size:13.5px; font-weight:600; padding:6px 12px; }
+  #tabs .tabrow-primary button[aria-selected="true"] { color:var(--ink);
+                 background:var(--surface); border-color:var(--border);
+                 box-shadow:inset 0 -2px 0 var(--us); }
+  #tabs .tabrow-more button { font-size:12px; padding:3px 9px; border-radius:99px;
+                 color:var(--muted); }
+  #tabs .tabrow-more button[aria-selected="true"] { color:var(--ink); font-weight:600;
+                 background:var(--surface); border-color:var(--ink2); }
+  .tabrow-lbl { font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em;
+                color:var(--muted); margin-right:3px; }
+
+  .panel { display:none; }
+  .panel.on { display:block; }
+  .panel-wait { background:var(--surface); border:1px dashed var(--border);
+                border-radius:12px; padding:14px; color:var(--ink2); font-size:13px; }
+  .panel-err { margin-top:8px; font-size:12px; color:var(--crit); }
   h1 { font-size:22px; letter-spacing:-0.02em; }
   h1 .tag { color:var(--ink2); font-weight:400; font-size:13px; margin-left:8px; }
   .pill { background:var(--surface); border:1px solid var(--border); border-radius:99px;
@@ -139,8 +185,11 @@
 </style>
 </head>
 <body>
+<div class="topbar">
 <header>
   <h1>FeelsLike<span class="tag">Buildings that listen · Team Goldilocks</span></h1>
+  <span class="simbadge" title="Every number on this page comes from the digital twin in sim/twin.py. No building management system is connected, no equipment is being written to.">
+    <span class="dot"></span><b>SIMULATION MODE</b><span>— no real HVAC equipment connected</span></span>
   <span class="pill">Sim clock <b id="clock">—</b></span>
   <span class="pill">Outdoor <b id="tout">—</b></span>
   <span class="pill pill-stale" id="stale" hidden>reconnecting…</span>
@@ -149,7 +198,29 @@
     <button data-s="960">960×</button>
   </div>
 </header>
+<nav id="tabs" role="tablist" aria-label="Dashboard sections">
+  <div class="tabrow tabrow-primary" role="presentation">
+    <button role="tab" id="tab-overview" data-tab="overview" aria-controls="panel-overview" aria-selected="true" tabindex="0">Overview</button>
+    <button role="tab" id="tab-twin" data-tab="twin" aria-controls="panel-twin" aria-selected="false" tabindex="-1">Live twin</button>
+    <button role="tab" id="tab-explain" data-tab="explain" aria-controls="panel-explain" aria-selected="false" tabindex="-1">Explain</button>
+    <button role="tab" id="tab-whatif" data-tab="whatif" aria-controls="panel-whatif" aria-selected="false" tabindex="-1">What-if</button>
+    <button role="tab" id="tab-demo" data-tab="demo" aria-controls="panel-demo" aria-selected="false" tabindex="-1">Demo</button>
+  </div>
+  <div class="tabrow tabrow-more" role="presentation">
+    <span class="tabrow-lbl" aria-hidden="true">more</span>
+    <button role="tab" id="tab-complaints" data-tab="complaints" aria-controls="panel-complaints" aria-selected="false" tabindex="-1">Complaints</button>
+    <button role="tab" id="tab-control" data-tab="control" aria-controls="panel-control" aria-selected="false" tabindex="-1">Control</button>
+    <button role="tab" id="tab-analytics" data-tab="analytics" aria-controls="panel-analytics" aria-selected="false" tabindex="-1">Analytics</button>
+    <button role="tab" id="tab-maintenance" data-tab="maintenance" aria-controls="panel-maintenance" aria-selected="false" tabindex="-1">Maintenance</button>
+    <button role="tab" id="tab-experiments" data-tab="experiments" aria-controls="panel-experiments" aria-selected="false" tabindex="-1">Experiments</button>
+    <button role="tab" id="tab-settings" data-tab="settings" aria-controls="panel-settings" aria-selected="false" tabindex="-1">Settings</button>
+  </div>
+</nav>
+</div>
 
+<!-- panel-overview is the polished console that shipped before the shell: it is
+     rendered by the inline script alone and keeps working if panels.js 404s. -->
+<section class="panel on" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
 <div class="race">
   <h2>The race <span class="right">same building, same weather — one listens</span></h2>
   <div>
@@ -220,6 +291,32 @@
     </div>
   </div>
 </div>
+</section>
+
+<!-- The other ten panels are mounted by /static/panels.js (agent D2). Each ships a
+     one-line honest placeholder so an unmounted tab reads as "loading", never as
+     broken; if panels.js never registers, the line says so after 4 s. -->
+<section class="panel" id="panel-twin" role="tabpanel" aria-labelledby="tab-twin">
+  <p class="panel-wait">Live twin · loading…</p></section>
+<section class="panel" id="panel-complaints" role="tabpanel" aria-labelledby="tab-complaints">
+  <p class="panel-wait">Complaints · loading…</p></section>
+<section class="panel" id="panel-control" role="tabpanel" aria-labelledby="tab-control">
+  <p class="panel-wait">Control · loading…</p></section>
+<section class="panel" id="panel-explain" role="tabpanel" aria-labelledby="tab-explain">
+  <p class="panel-wait">Explain · loading…</p></section>
+<section class="panel" id="panel-whatif" role="tabpanel" aria-labelledby="tab-whatif">
+  <p class="panel-wait">What-if · loading…</p></section>
+<section class="panel" id="panel-analytics" role="tabpanel" aria-labelledby="tab-analytics">
+  <p class="panel-wait">Analytics · loading…</p></section>
+<section class="panel" id="panel-maintenance" role="tabpanel" aria-labelledby="tab-maintenance">
+  <p class="panel-wait">Maintenance · loading…</p></section>
+<section class="panel" id="panel-experiments" role="tabpanel" aria-labelledby="tab-experiments">
+  <p class="panel-wait">Experiments · loading…</p></section>
+<section class="panel" id="panel-settings" role="tabpanel" aria-labelledby="tab-settings">
+  <p class="panel-wait">Settings · loading…</p></section>
+<section class="panel" id="panel-demo" role="tabpanel" aria-labelledby="tab-demo">
+  <p class="panel-wait">Demo · loading…</p></section>
+
 <div id="tooltip"></div>
 
 <script>
@@ -378,15 +475,9 @@ $('speed').addEventListener('click',async e=>{
   }catch(err){ /* buttons stay on the sim's real speed via tick() */ }
 });
 
-let failedTicks=0;
-async function tick(){
-  try{
-    const s=await (await fetch('/api/state')).json(); state=s;
-    failedTicks=0; $('stale').hidden=true; document.body.classList.remove('stale');
-    $('clock').textContent=s.sim.clock;
-    $('tout').textContent=s.sim.t_out.toFixed(1)+' °C';
-    setSpeedButtons(s.sim.speed);
-
+/* Everything below lives inside panel-overview, so it only runs while that tab is
+   visible — the shell calls it on activation and on every poll (see tick). */
+function renderOverview(s){
     /* the race */
     const us=s.meters.us.kwh, base=s.meters.base.kwh;
     $('kwh-us').textContent=us.toFixed(1)+' kWh';
@@ -414,11 +505,189 @@ async function tick(){
       $('parse-src').textContent='parser: '+s.feed[0].source
         +(s.feed[0].source==='rules'?' (offline fallback)':'');
     }
+}
+
+/* ==================================================================
+   THE SHELL. window.FL is the whole contract dashboard/panels.js binds
+   to; nothing here knows what any panel contains. Overview is native
+   (rendered above) so a missing panels.js costs the pitch nothing.
+   ================================================================== */
+const PANELS = ['overview','twin','complaints','control','explain','whatif',
+                'analytics','maintenance','experiments','settings','demo'];
+const reg = new Map();          /* key -> {mount, update, mounted, broken} */
+let activeTab = 'overview';
+const panelEl = k => $('panel-'+k);
+const tabEl   = k => $('tab-'+k);
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+const fmt = {
+  num(v, d=1){ return Number.isFinite(v)
+    ? Number(v).toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d})
+    : '—'; },
+  pct(v, d=1){ return Number.isFinite(v) ? Number(v).toFixed(d)+'%' : '—'; },
+  temp(v, d=1){ return Number.isFinite(v) ? Number(v).toFixed(d)+' °C' : '—'; },
+  /* sim seconds -> "Tue 14:05"; an already-formatted clock string passes through */
+  clock(t){ if(typeof t==='string') return t || '—';
+    if(!Number.isFinite(t)) return '—';
+    const s=Math.floor(t);
+    return DAYS[Math.floor(s/86400)%7]+' '+String(Math.floor(s%86400/3600)).padStart(2,'0')
+           +':'+String(Math.floor(s%3600/60)).padStart(2,'0'); }
+};
+
+async function readJson(r, path){
+  let j=null; try{ j=await r.json(); }catch(e){}
+  if(!r.ok){                       /* FastAPI detail may be a string or a 422 list */
+    const d=j && (j.detail ?? j.message);
+    const err=new Error(path+' → HTTP '+r.status
+      +(d ? ': '+(typeof d==='string'?d:JSON.stringify(d)) : ''));
+    err.status=r.status; err.body=j; throw err;
+  }
+  return j;
+}
+async function apiGet(path){
+  return readJson(await fetch(path,{headers:{'Accept':'application/json'}}), path);
+}
+async function apiPost(path, body){
+  return readJson(await fetch(path,{method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body ?? {})}), path);
+}
+
+function panelFail(key, phase, err){
+  console.error('[FL] panel '+key+' '+phase+' failed', err);
+  const p=reg.get(key); if(p) p.broken=true;          /* stop retrying at 1 Hz */
+  const note='This panel hit an error while '+phase+'ing. '
+            +'Nothing else is affected — the Overview tab is unchanged.';
+  const el=panelEl(key);
+  if(phase==='mount') el.innerHTML='<p class="panel-wait">'+esc(note)+'</p>';
+  else if(!el.querySelector('.panel-err'))
+    el.insertAdjacentHTML('beforeend','<p class="panel-err">'+esc(note)+'</p>');
+}
+function mountAndUpdate(key){
+  const p=reg.get(key); if(!p || p.broken) return;
+  if(!p.mounted){                 /* lazily: a tab nobody opens is never built */
+    p.mounted=true;
+    try{ if(p.mount) p.mount(panelEl(key)); }catch(err){ return panelFail(key,'mount',err); }
+  }
+  if(state && p.update){ try{ p.update(state); }catch(err){ panelFail(key,'updat',err); } }
+}
+function registerPanel(key, impl){
+  if(!PANELS.includes(key) || key==='overview'){
+    console.warn('[FL] registerPanel ignored: '+key
+      +(key==='overview'?' is rendered by the shell itself':' is not a panel key'));
+    return false;
+  }
+  reg.set(key, {mount:impl&&impl.mount, update:impl&&impl.update,
+                mounted:false, broken:false});
+  if(activeTab===key) mountAndUpdate(key);   /* registered after its tab was opened */
+  return true;
+}
+
+function activate(key, focus){
+  if(!PANELS.includes(key)) key='overview';
+  activeTab=key;
+  for(const k of PANELS){
+    const on=(k===key);
+    panelEl(k).classList.toggle('on', on);
+    const b=tabEl(k);
+    b.setAttribute('aria-selected', on?'true':'false');
+    b.tabIndex = on?0:-1;                    /* roving tabindex: one stop for the set */
+  }
+  if(focus) tabEl(key).focus();
+  /* hash, not history: a reload keeps the presenter where they were without
+     turning eleven tab clicks into eleven back-button steps. */
+  if(location.hash.slice(1)!==key){
+    try{ history.replaceState(null,'','#'+key); }catch(e){ location.hash=key; }
+  }
+  if(key==='overview'){ if(state) renderOverview(state); } else mountAndUpdate(key);
+  document.dispatchEvent(new CustomEvent('fl:tab',{detail:{key}}));
+}
+
+$('tabs').addEventListener('click', e=>{
+  const b=e.target.closest('button[data-tab]');
+  if(b) activate(b.dataset.tab, true);
+});
+$('tabs').addEventListener('keydown', e=>{
+  const b=e.target.closest('button[data-tab]'); if(!b) return;
+  const all=[...$('tabs').querySelectorAll('button[data-tab]')];
+  const rows=[...$('tabs').querySelectorAll('.tabrow')];
+  const gi=all.indexOf(b), i=[...b.parentElement.querySelectorAll('button[data-tab]')].indexOf(b);
+  let next=null;
+  if(e.key==='ArrowRight')      next=all[(gi+1)%all.length];
+  else if(e.key==='ArrowLeft')  next=all[(gi-1+all.length)%all.length];
+  else if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    const r=rows.indexOf(b.parentElement);
+    const other=rows[(r+(e.key==='ArrowDown'?1:rows.length-1))%rows.length];
+    const list=[...other.querySelectorAll('button[data-tab]')];
+    next=list[Math.min(i, list.length-1)];
+  }
+  else if(e.key==='Home') next=all[0];
+  else if(e.key==='End')  next=all[all.length-1];
+  else return;
+  e.preventDefault();
+  if(next) activate(next.dataset.tab, true);   /* automatic activation: focus == shown */
+});
+window.addEventListener('hashchange', ()=>activate(location.hash.slice(1), false));
+
+/* The published shell contract. Exact signatures, so panels.js never guesses:
+     FL.state                      latest /api/state object, or null before poll 1
+     await FL.get(path)            -> PARSED JSON (not a Response). Throws Error
+     await FL.post(path, body)     with .status and .body on any non-2xx.
+     FL.on('state', fn)            fn(stateObject) after every successful poll.
+                                   Returns an unsubscribe function.
+     FL.fmt.num/pct/temp/clock     null-safe formatters, em dash for no value
+     FL.registerPanel(key, {mount(el), update(state)})
+                                   mount runs once, on first activation, with the
+                                   panel <section>; update runs ~1 Hz while visible
+     FL.esc(text)                  escape occupant text before innerHTML (rule 6)
+     FL.keys / FL.active / FL.go(key)                                            */
+window.FL = {
+  state:null, get:apiGet, post:apiPost, fmt, registerPanel,
+  /* FL.on('state', fn) and FL.on('fl:state', fn) are the same subscription */
+  on(evt, fn){
+    const name='fl:'+String(evt).replace(/^fl:/,'');
+    const h=e=>fn(e.detail);
+    document.addEventListener(name, h);
+    return ()=>document.removeEventListener(name, h);   /* unsubscribe, additive */
+  },
+  esc, keys:PANELS.slice(),        /* esc: panels MUST escape occupant text too */
+  go:key=>activate(key, false),    /* demo step_hint.panel jumps tabs with this */
+  get active(){ return activeTab; }
+};
+
+let failedTicks=0;
+async function tick(){
+  try{
+    const s=await (await fetch('/api/state')).json(); state=s; FL.state=s;
+    failedTicks=0; $('stale').hidden=true; document.body.classList.remove('stale');
+    /* header chrome is outside every panel, so it always updates */
+    $('clock').textContent=s.sim.clock;
+    $('tout').textContent=s.sim.t_out.toFixed(1)+' °C';
+    setSpeedButtons(s.sim.speed);
+    if(activeTab==='overview') renderOverview(s);
+    document.dispatchEvent(new CustomEvent('fl:state',{detail:s}));
+    if(activeTab!=='overview') mountAndUpdate(activeTab);   /* visible panel only */
   }catch(e){
     if(++failedTicks>=3){ $('stale').hidden=false; document.body.classList.add('stale'); }
   }
 }
+
+/* If panels.js never arrives (404, syntax error, offline copy), say so plainly
+   instead of leaving ten tabs on "loading…" forever. */
+setTimeout(()=>{
+  for(const k of PANELS){
+    if(k==='overview' || reg.has(k)) continue;
+    const w=panelEl(k).querySelector('.panel-wait');
+    if(w) w.textContent=tabEl(k).textContent+' · panel module not loaded '
+      +'(/static/panels.js). Everything the demo needs is on Overview.';
+  }
+}, 4000);
+
+activate(location.hash.slice(1), false);
 tick(); setInterval(tick, 1000);
 </script>
+<!-- After the inline script on purpose: window.FL must exist before any panel
+     registers, and a failed load here leaves the Overview console untouched. -->
+<script src="/static/panels.js" defer></script>
 </body>
 </html>

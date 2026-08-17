@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FeelsLike — Tell the building</title>
+<!--
+  The occupant side of FeelsLike. Served at /occupant (backend.app), phone-sized.
+
+  WHY IT EXISTS: the operator console is a wall of numbers. The person who is
+  actually cold has one job — say so in three taps — and one right: to see what
+  the building did with their sentence. So this page is a form plus an HONEST
+  RECEIPT. Every line of the trace after a submit is read out of the real
+  /api/complaint response; nothing is animated to look like progress and no step
+  is drawn unless the server said it happened.
+
+  TWO RULES THIS FILE KEEPS:
+  1. The buttons do not send button codes. /api/complaint takes TEXT, so the
+     chips compose an English sentence and the page SHOWS THE EXACT STRING it is
+     about to post. The real parser then does the work, and the trace reports
+     what it actually extracted — which is why the trace can disagree with the
+     chips (a free-typed message with no room named really does come back as
+     "clarify"). All 75 chip combinations (5 issues x 3 severities x 5 rooms) are
+     verified to parse back to the issue/zone/severity they promise; anything the
+     chips miss goes in the free-text box and is sent verbatim.
+  2. Nothing external is loaded and nothing is faked when the network is gone: a
+     submit made offline is really queued and really posted on reconnect. There
+     is no service worker, so this page still needs the browser's HTTP cache to
+     re-open with no server — it just never lies about the connection state.
+
+  Same tokens, type and identity as dashboard/index.html so it reads as one
+  product. Escapes every string that reaches innerHTML (esc(), as the feed does).
+-->
+<style>
+  :root {
+    color-scheme: light; /* pinned like the console: one known look on the demo phone */
+    --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e;
+    --muted:#898781; --grid:#e1e0d9; --baseline:#c3c2b7;
+    --border:rgba(11,11,11,0.10); --us:#2a78d6; --base:#898781;
+    --good:#006300; --warn:#fab219; --crit:#d03b3b;
+    --tap:48px;                       /* every interactive row clears 44px */
+  }
+  * { box-sizing:border-box; margin:0; }
+  html, body { overflow-x:hidden; }   /* nothing may scroll sideways at 320px */
+  body { background:var(--page); color:var(--ink);
+         font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;
+         -webkit-text-size-adjust:100%; }
+  :focus-visible { outline:2px solid var(--us); outline-offset:2px; border-radius:4px; }
+
+  /* ---------------------------------------------------------------- shell */
+  .topbar { position:sticky; top:0; z-index:3; background:var(--page);
+            border-bottom:1px solid var(--border); padding:10px 14px 9px; }
+  h1 { font-size:17px; letter-spacing:-0.01em; display:flex; align-items:baseline;
+       gap:8px; flex-wrap:wrap; }
+  h1 .tag { font-size:11.5px; color:var(--ink2); font-weight:400; }
+  .badges { display:flex; gap:6px; flex-wrap:wrap; margin-top:7px; }
+  .simbadge { display:inline-flex; align-items:center; gap:6px; background:var(--surface);
+              border:1px solid var(--border); border-radius:99px; padding:3px 10px;
+              font-size:11px; color:var(--ink2); }
+  .simbadge .dot { width:7px; height:7px; border-radius:99px; background:var(--warn);
+                   flex:none; }
+  .simbadge b { color:var(--ink); font-weight:600; letter-spacing:0.04em; }
+  .netbadge { border-color:var(--crit); color:var(--crit); font-weight:600; }
+  .netbadge .dot { background:var(--crit); }
+
+  main { padding:14px 14px calc(112px + env(safe-area-inset-bottom)); /* clears sendbar */
+         max-width:560px; margin:0 auto; display:grid; gap:12px; }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px;
+          padding:12px; }
+  .card > legend, .card > h2 { font-size:12px; color:var(--ink2); font-weight:600;
+          text-transform:uppercase; letter-spacing:0.05em; padding:0; margin-bottom:9px; }
+  fieldset.card { border:1px solid var(--border); }
+  .hint { font-size:12px; color:var(--muted); margin-top:8px; }
+  .hint b { color:var(--ink2); font-weight:600; }
+
+  /* ------------------------------------------------------- issue + severity
+     Real radios, visually hidden but focusable, so the keyboard and the screen
+     reader get a proper single-choice group and the styling rides on :checked. */
+  .vh { position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+        overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  .issues { display:grid; grid-template-columns:repeat(auto-fit,minmax(126px,1fr));
+            gap:8px; }
+  .issues label { display:block; }
+  .issues span { display:flex; align-items:center; gap:8px; min-height:56px;
+                 padding:10px 12px; border:1px solid var(--grid); border-radius:10px;
+                 background:var(--page); font-size:15px; font-weight:600;
+                 color:var(--ink2); cursor:pointer; }
+  .issues i { width:10px; height:10px; border-radius:99px; flex:none;
+              background:var(--muted); }
+  .i-hot i { background:var(--crit); } .i-cold i { background:var(--us); }
+  .i-humid i { background:var(--warn); } .i-stuffy i { background:var(--ink2); }
+  .i-drafty i { background:var(--baseline); }
+  .issues input:checked + span { color:var(--ink); border-color:var(--ink2);
+            background:var(--surface); box-shadow:inset 0 0 0 1px var(--ink2); }
+  .issues input:focus-visible + span { outline:2px solid var(--us); outline-offset:2px; }
+
+  .seg { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+  .seg label { display:block; }
+  .seg span { display:flex; align-items:center; justify-content:center;
+              min-height:var(--tap); border:1px solid var(--grid); border-radius:10px;
+              background:var(--page); font-size:14px; font-weight:600; color:var(--ink2);
+              cursor:pointer; }
+  .seg input:checked + span { color:var(--ink); border-color:var(--ink2);
+              background:var(--surface); box-shadow:inset 0 0 0 1px var(--ink2); }
+  .seg input:focus-visible + span { outline:2px solid var(--us); outline-offset:2px; }
+
+  /* ----------------------------------------------------------- room + text */
+  label.field { display:block; font-size:12px; color:var(--ink2); font-weight:600;
+                text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
+  select, textarea, input[type=text] { font:inherit; width:100%; color:var(--ink);
+        background:var(--page); border:1px solid var(--grid); border-radius:10px;
+        padding:11px 12px; min-height:var(--tap); }
+  textarea { min-height:76px; resize:vertical; }
+  input[type=text]:disabled { color:var(--muted); background:var(--page); }
+  .roomnow { font-size:12.5px; color:var(--ink2); margin-top:8px;
+             font-variant-numeric:tabular-nums; }
+  .roomnow b { color:var(--ink); }
+  .roomnow .warm { color:var(--crit); } .roomnow .cool { color:var(--us); }
+
+  /* switch: still a checkbox underneath */
+  .switch { display:flex; align-items:center; gap:12px; min-height:var(--tap);
+            cursor:pointer; }
+  .switch .track { width:44px; height:26px; border-radius:99px; background:var(--grid);
+            border:1px solid var(--border); flex:none; position:relative; }
+  .switch .track::after { content:""; position:absolute; top:2px; left:2px; width:20px;
+            height:20px; border-radius:99px; background:var(--surface);
+            border:1px solid var(--border); transition:left .15s ease; }
+  .switch input:checked + .track { background:var(--us); border-color:var(--us); }
+  .switch input:checked + .track::after { left:20px; }
+  .switch input:focus-visible + .track { outline:2px solid var(--us); outline-offset:2px; }
+  .switch .lbl { font-size:14px; font-weight:600; color:var(--ink2); }
+  .switch input:checked ~ .lbl { color:var(--ink); }
+
+  /* ---------------------------------------------------------------- preview */
+  .preview { border:1px dashed var(--border); border-radius:10px; padding:10px;
+             background:var(--page); font-size:14px; color:var(--ink);
+             overflow-wrap:anywhere; }
+  .preview .q { color:var(--muted); }
+
+  /* ---------------------------------------------------------------- sendbar */
+  .sendbar { position:fixed; left:0; right:0; bottom:0; z-index:4; background:var(--page);
+             border-top:1px solid var(--border);
+             padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+             display:grid; gap:6px; justify-items:stretch; }
+  .sendbar .row { display:flex; gap:8px; max-width:560px; margin:0 auto; width:100%; }
+  #send { flex:1; font:inherit; font-size:16px; font-weight:600; min-height:54px;
+          border-radius:12px; border:1px solid var(--ink); background:var(--ink);
+          color:var(--page); cursor:pointer; }
+  #send:disabled { background:var(--muted); border-color:var(--muted); cursor:progress; }
+  #retry { font:inherit; font-size:14px; font-weight:600; min-height:54px; padding:0 16px;
+           border-radius:12px; border:1px solid var(--ink2); background:var(--surface);
+           color:var(--ink); cursor:pointer; }
+  .status { max-width:560px; margin:0 auto; width:100%; font-size:12.5px;
+            color:var(--ink2); min-height:16px; }
+  .status.err { color:var(--crit); font-weight:600; }
+  .status.ok { color:var(--good); }
+
+  /* ------------------------------------------------------------------ trace */
+  .trace ol { list-style:none; display:grid; gap:2px; }
+  .step { display:grid; grid-template-columns:14px minmax(0,1fr); gap:10px;
+          padding:8px 0 8px 2px; border-top:1px solid var(--grid); }
+  .step:first-child { border-top:0; }
+  .step .mark { position:relative; }
+  .step .mark::before { content:""; position:absolute; top:5px; left:2px; width:10px;
+          height:10px; border-radius:99px; background:var(--good); }
+  .step .mark::after { content:""; position:absolute; top:18px; left:6.5px; bottom:-10px;
+          width:1px; background:var(--grid); }
+  .step:last-child .mark::after { display:none; }
+  .step.warn .mark::before { background:var(--warn); }
+  .step.skip .mark::before { background:var(--baseline); }
+  .step.err .mark::before  { background:var(--crit); }
+  .step b { font-size:13px; }
+  .step p { font-size:13px; color:var(--ink2); overflow-wrap:anywhere; margin-top:2px; }
+  .step p .k { color:var(--ink); font-weight:600; }
+  .disclose { font-size:12px; color:var(--ink2); background:var(--page); padding:8px 10px;
+              border-radius:8px; border:1px solid var(--border); margin-top:8px;
+              overflow-wrap:anywhere; }
+  .disclose.ext { border-color:var(--warn); }
+  details.raw { margin-top:10px; }
+  details.raw summary { font-size:12px; color:var(--ink2); cursor:pointer;
+              min-height:32px; display:flex; align-items:center; }
+  details.raw pre { font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+              background:var(--page); border:1px solid var(--border); border-radius:8px;
+              padding:9px; margin-top:6px; overflow-x:auto; max-height:260px; }
+  .queued { font-size:13px; color:var(--ink2); }
+  .queued b { color:var(--ink); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>FeelsLike<span class="tag">Tell the building how it feels</span></h1>
+  <div class="badges">
+    <span class="simbadge"><span class="dot"></span><b>SIMULATION MODE</b>
+      <span>— no real HVAC connected</span></span>
+    <span class="simbadge" id="netbadge" hidden><span class="dot"></span>
+      <span id="nettext">offline</span></span>
+  </div>
+</div>
+
+<main>
+  <form id="form" novalidate>
+    <fieldset class="card issues-card">
+      <legend>What's wrong?</legend>
+      <div class="issues" id="issues">
+        <label class="i-hot"><input class="vh" type="radio" name="issue" value="too_hot" checked>
+          <span><i aria-hidden="true"></i>Too hot</span></label>
+        <label class="i-cold"><input class="vh" type="radio" name="issue" value="too_cold">
+          <span><i aria-hidden="true"></i>Too cold</span></label>
+        <label class="i-humid"><input class="vh" type="radio" name="issue" value="humid">
+          <span><i aria-hidden="true"></i>Too humid</span></label>
+        <label class="i-stuffy"><input class="vh" type="radio" name="issue" value="stuffy">
+          <span><i aria-hidden="true"></i>Stuffy</span></label>
+        <label class="i-drafty"><input class="vh" type="radio" name="issue" value="drafty">
+          <span><i aria-hidden="true"></i>Drafty</span></label>
+      </div>
+    </fieldset>
+
+    <div class="card">
+      <label class="field" for="room">Where are you?</label>
+      <select id="room" name="room"></select>
+      <p class="roomnow" id="roomnow">Reading the building…</p>
+    </div>
+
+    <fieldset class="card">
+      <legend>How bad is it?</legend>
+      <div class="seg" id="sev">
+        <label><input class="vh" type="radio" name="sev" value="1"><span>Low</span></label>
+        <label><input class="vh" type="radio" name="sev" value="2" checked><span>Medium</span></label>
+        <label><input class="vh" type="radio" name="sev" value="3"><span>High</span></label>
+      </div>
+    </fieldset>
+
+    <div class="card">
+      <label class="field" for="free">Anything the buttons miss</label>
+      <textarea id="free" placeholder="e.g. the vent above my desk is blowing right on my neck"
+                aria-describedby="freehint"></textarea>
+      <p class="hint" id="freehint">Typed words are sent <b>exactly as written</b> instead of
+        the sentence below — the same parser handles both.</p>
+    </div>
+
+    <div class="card">
+      <h2>Sent as</h2>
+      <label class="switch" for="anon">
+        <input class="vh" type="checkbox" id="anon"><span class="track" aria-hidden="true"></span>
+        <span class="lbl">Post anonymously</span>
+      </label>
+      <label class="field" for="who" style="margin-top:6px">Your name</label>
+      <input type="text" id="who" value="occupant" autocomplete="nickname"
+             aria-describedby="anonhint" maxlength="40">
+      <p class="hint" id="anonhint">Phone numbers and IDs are stripped from every message
+        before it is read, anonymous or not.</p>
+    </div>
+
+    <div class="card">
+      <h2>This exact message is sent</h2>
+      <p class="preview" id="preview"></p>
+      <p class="hint" id="previewnote"></p>
+    </div>
+  </form>
+
+  <section class="card trace" id="tracecard" hidden aria-labelledby="tracehead">
+    <h2 id="tracehead">What the building did</h2>
+    <div id="trace" aria-live="polite" aria-atomic="true"></div>
+  </section>
+</main>
+
+<div class="sendbar">
+  <div class="row">
+    <button type="submit" id="send" form="form">Send</button>
+    <button type="button" id="retry" hidden>Retry</button>
+  </div>
+  <p class="status" id="status" role="status" aria-live="polite"></p>
+</div>
+
+<script>
+'use strict';
+/* --------------------------------------------------------------- helpers */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* Own-property lookup only: a server-supplied key must never reach an inherited
+   member ("constructor") and print a function into the receipt. */
+const pick = (map, key, dflt) =>
+  (Object.prototype.hasOwnProperty.call(map, key) && typeof map[key] === 'string')
+    ? map[key] : dflt;
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }
+              catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+
+/* Mirrors sim/twin.py ZONES. Only used before the first /api/state answers (or
+   when it never does) so the picker is never empty; the live list replaces it. */
+const FALLBACK_ZONES = [
+  {id:'zone_a', name:'Open Office A'}, {id:'zone_b', name:'Conference Room B'},
+  {id:'zone_c', name:'Cabin C'},       {id:'zone_d', name:'Lobby D'},
+  {id:'zone_e', name:'Cafeteria E'}
+];
+/* Wording chosen so the offline rules parser returns exactly this issue, and the
+   severity wrappers land on 1/2/3 (verified for all 5x3x5 combinations). */
+const ISSUE_WORD = {too_hot:'hot', too_cold:'cold', humid:'humid',
+                    stuffy:'stuffy', drafty:'drafty'};
+const SEV_PREFIX = {1:'it is a bit ', 2:'it is really ', 3:'it is really '};
+const SEV_SUFFIX = {1:'', 2:'', 3:', this is unbearable'};
+const ISSUE_LABEL = {too_hot:'too hot', too_cold:'too cold', humid:'humid',
+                     stuffy:'stuffy', drafty:'drafty', other:'not a comfort issue'};
+/* parse() sources, in occupant language. Anything unknown is shown raw rather
+   than guessed at — the disclosure line below the trace fails closed anyway. */
+const SOURCE_LABEL = {rules:'offline rules engine', llm:'external language model',
+                      memory:"this building's own history"};
+
+let zones = LS.get('fl.occ.zones', FALLBACK_ZONES);
+let queued = LS.get('fl.occ.queued', null);   /* one held submit, survives reload */
+let sending = false, lastPayload = null, online = navigator.onLine !== false;
+
+/* ------------------------------------------------------------ the message */
+function chosen(name) {
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  return el ? el.value : '';
+}
+function roomName(id) {
+  const z = zones.find(z => z.id === id);
+  return z ? z.name : id;
+}
+function composed() {
+  const sev = +chosen('sev') || 2;
+  return SEV_PREFIX[sev] + ISSUE_WORD[chosen('issue') || 'too_hot'] +
+         ' in ' + roomName($('room').value) + SEV_SUFFIX[sev];
+}
+function outgoing() {
+  const free = $('free').value.trim();
+  return free || composed();
+}
+function drawPreview() {
+  const free = $('free').value.trim();
+  $('preview').innerHTML = '<span class="q">"</span>' + esc(outgoing()) +
+                           '<span class="q">"</span>';
+  const room = roomName($('room').value);
+  $('previewnote').textContent = !free
+    ? 'Built from your choices. The parser decides the rest.'
+    : free.toLowerCase().includes(room.split(' ')[0].toLowerCase())
+      ? `Your own words, sent as typed — they name ${room}.`
+      : 'Your own words, sent as typed. If they do not name a room the building ' +
+        'will ask which one, and the trace will say so.';
+}
+
+/* ------------------------------------------------------- rooms + live data */
+function drawRooms() {
+  const want = LS.get('fl.occ.room', zones[0] && zones[0].id);
+  $('room').innerHTML = zones.map(z =>
+    `<option value="${esc(z.id)}"${z.id === want ? ' selected' : ''}>${esc(z.name)}</option>`
+  ).join('');
+  if (!$('room').value && zones[0]) $('room').value = zones[0].id;
+}
+function drawRoomNow(state) {
+  const el = $('roomnow');
+  if (!state) { el.textContent = online ? 'Reading the building…'
+                                        : 'No connection — room conditions unavailable.'; return; }
+  const z = (state.zones || []).find(z => z.id === $('room').value);
+  if (!z) { el.textContent = 'Room conditions unavailable.'; return; }
+  const cls = z.temp > 26.5 ? 'warm' : z.temp < 23 ? 'cool' : '';
+  const n = z.active_constraints || 0;
+  el.innerHTML = `Right now: <b class="${cls}">${z.temp.toFixed(1)} °C</b>` +
+    ` · target <b>${z.setpoint.toFixed(1)} °C</b> · outdoor ${state.sim.t_out.toFixed(1)} °C` +
+    ` · <b>${n}</b> active request${n === 1 ? '' : 's'} here` +
+    ` · ${esc(state.sim.clock)}`;
+}
+function setNet(up, why) {
+  online = up;
+  $('netbadge').hidden = up;
+  $('nettext').textContent = why || 'offline — nothing is being sent';
+  $('netbadge').classList.toggle('netbadge', !up);
+}
+
+let latestState = null;
+async function pollState() {
+  try {
+    const r = await fetch('/api/state', {cache:'no-store'});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    latestState = await r.json();
+    if (Array.isArray(latestState.zones) && latestState.zones.length) {
+      const fresh = latestState.zones.map(z => ({id:z.id, name:z.name}));
+      if (JSON.stringify(fresh) !== JSON.stringify(zones)) {
+        zones = fresh; LS.set('fl.occ.zones', zones); drawRooms(); drawPreview();
+      }
+    }
+    setNet(true);
+    drawRoomNow(latestState);
+  } catch (e) {
+    setNet(false, 'no connection to the building');
+    drawRoomNow(null);
+  }
+}
+
+/* ------------------------------------------------------------- the receipt
+   Five steps, every one of them read out of the real /api/complaint response.
+   A step that did not happen says so (skip/warn) instead of being drawn green. */
+function step(state, title, body) {
+  return `<li class="step ${state}"><span class="mark" aria-hidden="true"></span>
+    <div><b>${esc(title)}</b><p>${body}</p></div></li>`;
+}
+function k(v) { return `<span class="k">${esc(v)}</span>`; }
+
+function drawTrace(res, disclosure) {
+  const p = res.parsed || {};
+  /* /api/complaint returns the LONG feed action ("clarify — which zone? (…)"),
+     because **entry overrides the short key. Match by prefix like the console
+     feed does, never by equality. */
+  const act = String(res.action || '');
+  const is = pre => act.startsWith(pre);
+  const zoneNames = (res.zones || (p.zone_ids || [])).map(roomName);
+
+  /* 1 — Received: what the server actually stored, after PII scrubbing. */
+  let s1 = `"${esc(res.text)}" · as ${k(res.author || 'occupant')}` +
+           (res.author_anonymous ? ' (session pseudonym)' : '') +
+           (res.sim_clock ? ` · sim clock ${k(res.sim_clock)}` : '');
+  if (res.redacted && res.redacted.length)
+    s1 += `<br>Removed before parsing: ${k(res.redacted.join(', '))}`;
+
+  /* 2 — Parsing: which engine ran, how long it took, where the text went. */
+  const src = String(res.source || '');
+  const s2 = `${k(pick(SOURCE_LABEL, src, src || 'unknown engine'))} · ` +
+             `${k((res.latency_ms ?? 0) + ' ms')}`;
+
+  /* 3 — Validated: the parse itself, including the honest "not understood". */
+  let st3 = 'ok', s3;
+  if (is('all-clear') || is('noted')) {
+    s3 = `Read as an ${k('all-clear')}, not a new complaint` +
+         (zoneNames.length ? ` · ${k(zoneNames.join(', '))}` : '');
+  } else if (!p.is_comfort_complaint) {
+    st3 = 'warn';
+    s3 = `Not read as a comfort complaint` +
+         (p.requires_clarification ? ` · ${k('needs clarification')}` : '') +
+         (p.reasoning ? `<br>${esc(p.reasoning)}` : '');
+  } else {
+    s3 = `${k(pick(ISSUE_LABEL, p.issue, p.issue))} · severity ${k(p.severity + '/3')}` +
+         ` · confidence ${k(Math.round((p.confidence ?? 0) * 100) + '%')}` +
+         ` · ${zoneNames.length ? k(zoneNames.join(', ')) : k('no room identified')}` +
+         (p.language && p.language !== 'en' ? ` · language ${k(p.language)}` : '') +
+         (p.requires_clarification ? `<br>Flagged ${k('needs clarification')}` : '');
+  }
+
+  /* 4 — Constraint created: the control-layer consequence, or why there is none. */
+  let st4 = 'skip', s4;
+  if (is('applied')) {
+    st4 = 'ok';
+    const ids = res.constraints || [];
+    s4 = `${k(ids.length + ' constraint(s)')} created` +
+         (ids.length ? ` · ${k((ids.length === 1 ? 'id ' : 'ids ') + ids.join(', '))}` : '') +
+         (res.complaint_id ? ` · complaint ${k(res.complaint_id)}` : '') +
+         `<br>Held for ${k(zoneNames.join(', '))} until it expires or you say it is fine.`;
+  } else if (is('all-clear')) {
+    st4 = 'ok';
+    s4 = `${k((res.cleared ?? 0) + ' constraint(s)')} cleared in ` +
+         `${k(zoneNames.join(', '))} — the building stops compensating.`;
+  } else if (is('clarify')) {
+    st4 = 'warn';
+    s4 = 'No constraint — no room was identified, so nothing was applied.<br>' +
+         esc(act.replace(/^clarify\s*[—-]\s*/, ''));
+  } else if (is('noted')) {
+    s4 = 'Nothing to clear — there was no active request for that room.';
+  } else {
+    s4 = 'No constraint created. The building took no action on this message.<br>' +
+         esc(act);
+  }
+
+  /* 5 — Controller responded: the arbitration summary the operator sees too. */
+  let st5 = 'skip', s5 = 'The controller was not asked to change anything.';
+  const ex = res.explanation;
+  const zNow = latestState &&
+    (latestState.zones || []).find(z => z.id === (res.zones || [])[0]);
+  if (is('all-clear')) {
+    st5 = 'ok';
+    s5 = `Nothing left to compensate for in ${k(zoneNames.join(', '))} — the ` +
+         'controller is back on its own schedule' +
+         (zNow ? ` (target now ${k(zNow.setpoint.toFixed(1) + ' °C')}).` : '.');
+  } else if (ex) {
+    st5 = ex.conflict ? 'warn' : 'ok';
+    const a = ex.adjustment;
+    s5 = esc(ex.summary || '') +
+      (a ? `<br>Setpoint ${k((a.setpoint_offset >= 0 ? '+' : '') +
+            a.setpoint_offset.toFixed(1) + ' °C')}` +
+           (a.vent_delta ? ` · airflow ${k((a.vent_delta > 0 ? '+' : '') + a.vent_delta)}` : '')
+         : '') +
+      (ex.arbitration && ex.arbitration !== 'none'
+        ? `<br>Arbitration: ${k(ex.arbitration.replace(/_/g, ' '))}` : '');
+    if (Array.isArray(res.explanations) && res.explanations.length > 1)
+      s5 += `<br>${k(res.explanations.length + ' rooms')} arbitrated separately.`;
+  }
+
+  const ext = disclosure && disclosure.external;
+  $('trace').innerHTML = '<ol>' +
+    step('ok', 'Received', s1) +
+    step('ok', 'Parsing', s2) +
+    step(st3, 'Validated', s3) +
+    step(st4, 'Constraint created', s4) +
+    step(st5, 'Controller responded', s5) +
+    '</ol>' +
+    `<p class="disclose${ext ? ' ext' : ''}">${esc((disclosure && disclosure.text) || '')}</p>` +
+    '<details class="raw"><summary>Show the raw server response</summary>' +
+    `<pre>${esc(JSON.stringify(res, null, 2))}</pre></details>`;
+  $('tracecard').hidden = false;
+  $('tracecard').scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
+    ? 'auto' : 'smooth', block:'nearest'});
+}
+
+/* The disclosure sentence is authored by the server (privacy.AIDisclosure) and
+   arrives on /api/state. It is only trusted when it describes THIS message's
+   source; otherwise a local sentence that fails closed (external unless proven
+   local) is used, because under-disclosing is the one unacceptable error. */
+function disclosureFor(res) {
+  const d = latestState && latestState.privacy && latestState.privacy.ai_disclosure;
+  if (d && d.source === res.source && d.text) return d;
+  const external = res.external_ai !== false && res.source !== 'rules';
+  return {external, text: external
+    ? 'Sent to an external LLM provider to be understood — this message left the building.'
+    : 'Parsed locally on this machine by the offline rules engine — no data left the building.'};
+}
+
+/* --------------------------------------------------------------- submitting */
+function setStatus(msg, cls) {
+  const el = $('status');
+  el.textContent = msg;
+  el.className = 'status' + (cls ? ' ' + cls : '');
+}
+function payloadNow() {
+  return {text: outgoing(), author: $('anon').checked ? 'occupant' : ($('who').value.trim() || 'occupant'),
+          anonymous: $('anon').checked};
+}
+function holdQueue(payload, why) {
+  queued = payload; LS.set('fl.occ.queued', queued);
+  $('retry').hidden = false;
+  setStatus(why, 'err');
+  $('trace').innerHTML = `<p class="queued"><b>Queued, not sent.</b> "${esc(payload.text)}"<br>
+    It goes out automatically the moment the connection is back — nothing has reached
+    the building yet, so nothing has changed.</p>`;
+  $('tracecard').hidden = false;
+}
+async function post(payload) {
+  const r = await fetch('/api/complaint', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  if (!r.ok) {
+    let detail = 'HTTP ' + r.status;
+    try { const j = await r.json(); if (j && j.detail) detail = String(j.detail); } catch (e) {}
+    const err = new Error(detail); err.http = r.status; throw err;
+  }
+  return r.json();
+}
+async function send(payload) {
+  if (sending) return;
+  const body = payload || payloadNow();
+  if (!body.text) { setStatus('Nothing to send yet.', 'err'); return; }
+  lastPayload = body;
+  if (!navigator.onLine) { setNet(false, 'offline — your phone has no connection');
+                           holdQueue(body, 'Offline — message queued.'); return; }
+  sending = true; $('send').disabled = true; $('retry').hidden = true;
+  $('form').setAttribute('aria-busy', 'true');
+  setStatus('Sending…');
+  try {
+    const res = await post(body);
+    queued = null; LS.set('fl.occ.queued', null);
+    await pollState();                      /* fresh disclosure + room numbers */
+    drawTrace(res, disclosureFor(res));
+    setStatus(res.action === 'applied' ? 'Sent — the building is acting on it.'
+            : res.action === 'cleared' ? 'Thanks — request cleared.'
+            : 'Sent — see what the building made of it.', 'ok');
+    $('free').value = '';                   /* cleared only once it was heard */
+    drawPreview();
+  } catch (e) {
+    if (!navigator.onLine) { setNet(false, 'offline — your phone has no connection');
+                             holdQueue(body, 'Offline — message queued.'); }
+    else { $('retry').hidden = false;
+           setStatus('Not sent (' + e.message + '). Your message is kept — tap Retry.', 'err'); }
+  } finally {
+    sending = false; $('send').disabled = false; $('form').removeAttribute('aria-busy');
+  }
+}
+async function flushQueue() {
+  if (!queued || sending || !navigator.onLine) return;
+  setStatus('Connection back — sending your queued message…');
+  await send(queued);
+}
+
+/* ---------------------------------------------------------------- wiring */
+$('form').addEventListener('submit', e => { e.preventDefault(); send(); });
+$('retry').addEventListener('click', () => send(lastPayload || queued || undefined));
+$('issues').addEventListener('change', drawPreview);
+$('sev').addEventListener('change', drawPreview);
+$('free').addEventListener('input', drawPreview);
+$('room').addEventListener('change', () => {
+  LS.set('fl.occ.room', $('room').value); drawPreview(); drawRoomNow(latestState);
+});
+$('anon').addEventListener('change', () => {
+  const on = $('anon').checked;
+  LS.set('fl.occ.anon', on);
+  $('who').disabled = on;
+  $('anonhint').textContent = on
+    ? 'Your name is not sent at all — the building stores a per-session pseudonym ' +
+      'instead. Phone numbers and IDs are stripped either way.'
+    : 'Phone numbers and IDs are stripped from every message before it is read, ' +
+      'anonymous or not.';
+});
+$('who').addEventListener('change', () => LS.set('fl.occ.name', $('who').value.trim()));
+addEventListener('online',  () => { setNet(true); flushQueue(); });
+addEventListener('offline', () => setNet(false, 'offline — your phone has no connection'));
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') pollState();
+});
+
+/* ------------------------------------------------------------------ start */
+$('who').value = LS.get('fl.occ.name', 'occupant') || 'occupant';
+$('anon').checked = !!LS.get('fl.occ.anon', false);
+$('anon').dispatchEvent(new Event('change'));
+drawRooms(); drawPreview();
+if (queued) holdQueue(queued, 'A message from earlier is still queued.');
+pollState().then(flushQueue);
+setInterval(() => { if (document.visibilityState === 'visible' && !sending) pollState(); }, 12000);
+</script>
+</body>
+</html>

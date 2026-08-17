@@ -1,0 +1,180 @@
+{
+  "n": 20,
+  "mode": "rules (offline)",
+  "tally": {
+    "det": 17,
+    "zoneset": 19,
+    "issue": 18,
+    "triple": 16
+  },
+  "pct": {
+    "det": 85,
+    "zoneset": 95,
+    "issue": 90,
+    "triple": 80
+  },
+  "by_category": {
+    "indirect-cold": {
+      "n": 1,
+      "triple": 1
+    },
+    "sarcasm-inverted": {
+      "n": 1,
+      "triple": 0
+    },
+    "metaphor-humid": {
+      "n": 1,
+      "triple": 1
+    },
+    "hinglish-implied-heat": {
+      "n": 1,
+      "triple": 1
+    },
+    "tamil-english": {
+      "n": 1,
+      "triple": 1
+    },
+    "multi-zone-hinglish": {
+      "n": 1,
+      "triple": 1
+    },
+    "typos": {
+      "n": 1,
+      "triple": 1
+    },
+    "appliance-negative": {
+      "n": 2,
+      "triple": 1
+    },
+    "outdoor-negative": {
+      "n": 1,
+      "triple": 1
+    },
+    "retraction": {
+      "n": 1,
+      "triple": 1
+    },
+    "retraction-no-longer": {
+      "n": 1,
+      "triple": 1
+    },
+    "drafty": {
+      "n": 1,
+      "triple": 1
+    },
+    "ambiguous-needs-clarify": {
+      "n": 1,
+      "triple": 0
+    },
+    "multi-zone": {
+      "n": 1,
+      "triple": 1
+    },
+    "unknown-zone": {
+      "n": 1,
+      "triple": 1
+    },
+    "verbose-stuffy": {
+      "n": 1,
+      "triple": 1
+    },
+    "tamil-english-stuffy": {
+      "n": 1,
+      "triple": 1
+    },
+    "sarcasm-heat": {
+      "n": 1,
+      "triple": 1
+    },
+    "contrast-two-clauses": {
+      "n": 1,
+      "triple": 0
+    }
+  },
+  "failures": [
+    {
+      "text": "whoever runs the cafeteria AC hates warm-blooded people",
+      "category": "sarcasm-inverted",
+      "gold": {
+        "is_comfort_complaint": true,
+        "zone_ids": [
+          "zone_e"
+        ],
+        "issue": "too_cold"
+      },
+      "got": {
+        "is_comfort_complaint": false,
+        "zone_ids": [
+          "zone_e"
+        ],
+        "issue": "other"
+      },
+      "missed": [
+        "det",
+        "issue"
+      ],
+      "source": "rules"
+    },
+    {
+      "text": "the microwave in the pantry is red hot",
+      "category": "appliance-negative",
+      "gold": {
+        "is_comfort_complaint": false,
+        "zone_ids": [],
+        "issue": "other"
+      },
+      "got": {
+        "is_comfort_complaint": false,
+        "zone_ids": [
+          "zone_e"
+        ],
+        "issue": "other"
+      },
+      "missed": [
+        "zoneset"
+      ],
+      "source": "rules"
+    },
+    {
+      "text": "could someone look at the temperature situation",
+      "category": "ambiguous-needs-clarify",
+      "gold": {
+        "is_comfort_complaint": true,
+        "zone_ids": [],
+        "issue": "other"
+      },
+      "got": {
+        "is_comfort_complaint": false,
+        "zone_ids": [],
+        "issue": "other"
+      },
+      "missed": [
+        "det"
+      ],
+      "source": "rules"
+    },
+    {
+      "text": "printer room is fine but the open office is unbearable",
+      "category": "contrast-two-clauses",
+      "gold": {
+        "is_comfort_complaint": true,
+        "zone_ids": [
+          "zone_a"
+        ],
+        "issue": "too_hot"
+      },
+      "got": {
+        "is_comfort_complaint": false,
+        "zone_ids": [
+          "zone_a"
+        ],
+        "issue": "other"
+      },
+      "missed": [
+        "det",
+        "issue"
+      ],
+      "source": "rules"
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "_readme": [
+    "BLIND PROBE — the integrity check on the NLP benchmark.",
+    "",
+    "benchmark.json has a dev split (tuned on) and heldout splits (written as tests).",
+    "In practice a held-out split stops being held out the moment someone develops",
+    "against it: you read the failures, you fix them, and the score climbs toward 100%",
+    "without the parser getting proportionally better at language it has never seen.",
+    "That is exactly what happened here — held-out exact-triple read 55% before a",
+    "parser rewrite and 100% after, while this probe scored 63% on the same parser.",
+    "",
+    "These cases exist to measure that gap. RULES OF USE:",
+    "  1. Never fix a parser bug BY LOOKING AT A CASE IN THIS FILE. Fix the general",
+    "     rule, then re-measure here.",
+    "  2. If a case here does inform a fix, it is burned: move it into benchmark.json",
+    "     as a heldout case and write a fresh probe case to replace it.",
+    "  3. Quote THIS number in the report and the deck, not the tuned-split number.",
+    "",
+    "Gold format matches benchmark.json so the same scorer logic applies."
+  ],
+  "cases": [
+    {"text": "my fingers are numb in the board room", "category": "indirect-cold", "gold": {"is_comfort_complaint": true, "zone_ids": ["zone_b"], "issue": "too_cold"}},
+    {"text": "whoever runs the cafeteria AC hates warm-blooded people", "category": "sarcasm-inverted", "gold": {"is_comfort_complaint": true, "zone_ids": ["zone_e"], "issue": "too_cold"}},
+    {"text": "bullpen is a legit swamp today", "category": "metaphor-humid", "gold": {"is_comfort_complaint": true, "zone_ids": ["zone_a"], "issue": "humid"}},
+    {"text": "kitne din se cabin me AC chal hi nahi raha", "category": "hinglish-implied-heat", "gold": {"is_comfort_complaint": true, "zone_ids": ["zone_c"], "issue": "too_hot"}},
+    {"text": "manager room la romba kuliru", "category": "tamil-english", "gold": {"is_comfort_complaint": true, "zone_ids": ["zone_c"], "issue": "too_cold"}},
+    {"text": "reception aur canteen dono me garmi hai", "category": "multi-zone-hinglish", "gold": {"is_comfort_complaint": true, "zone_ids": ["zone_d", "zone_e"], "issue": "too_hot"}},
+    {"text": "teh confrence rom is stuffyy", "category": "typos", "gold": {"is_comfort_complaint": true, "zone_ids": ["zone_b"], "issue": "stuffy"}},
+    {"text": "the microwave in the pantry is red hot", "category": "appliance-negative", "gold": {"is_comfort_complaint": false, "zone_ids": [], "issue": "other"}},
+    {"text": "my laptop fan is blowing hot air on my hand", "category": "appliance-negative", "gold": {"is_comfort_complaint": false, "zone_ids": [], "issue": "other"}},
+    {"text": "apparently it hit 41 outside, brutal summer", "category": "outdoor-negative", "gold": {"is_comfort_complaint": false, "zone_ids": [], "issue": "other"}},
+    {"text": "all sorted in the cabin now, appreciate it", "category": "retraction", "gold": {"is_comfort_complaint": false, "zone_ids": ["zone_c"], "issue": "other"}},
+    {"text": "no longer stuffy in reception, thanks team", "category": "retraction-no-longer", "gold": {"is_comfort_complaint": false, "zone_ids": ["zone_d"], "issue": "other"}},
+    {"text": "vent is pointed straight at my neck in the lobby", "category": "drafty", "gold": {"is_comfort_complaint": true, "zone_ids": ["zone_d"], "issue": "drafty"}},
+    {"text": "could someone look at the temperature situation", "category": "ambiguous-needs-clarify", "gold": {"is_comfort_complaint": true, "zone_ids": [], "issue": "other"}},
+    {"text": "open office and cabin are both iceboxes", "category": "multi-zone", "gold": {"is_comfort_complaint": true, "zone_ids": ["zone_a", "zone_c"], "issue": "too_cold"}},
+    {"text": "second floor east wing is roasting", "category": "unknown-zone", "gold": {"is_comfort_complaint": true, "zone_ids": [], "issue": "too_hot"}},
+    {"text": "conference room smells like everyone's lunch and nobody opened a window", "category": "verbose-stuffy", "gold": {"is_comfort_complaint": true, "zone_ids": ["zone_b"], "issue": "stuffy"}},
+    {"text": "canteen la kaathu illa, mudiyala", "category": "tamil-english-stuffy", "gold": {"is_comfort_complaint": true, "zone_ids": ["zone_e"], "issue": "stuffy"}},
+    {"text": "is the AC even on in the lobby or is that decorative", "category": "sarcasm-heat", "gold": {"is_comfort_complaint": true, "zone_ids": ["zone_d"], "issue": "too_hot"}},
+    {"text": "printer room is fine but the open office is unbearable", "category": "contrast-two-clauses", "gold": {"is_comfort_complaint": true, "zone_ids": ["zone_a"], "issue": "too_hot"}}
+  ]
+}

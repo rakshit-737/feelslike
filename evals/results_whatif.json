@@ -1,0 +1,3379 @@
+{
+  "horizon_h": 6.0,
+  "seeds": [
+    7,
+    8,
+    9
+  ],
+  "base_seed": 7,
+  "start_hour": 9.0,
+  "warmup_h": 2.0,
+  "complaints": [
+    [
+      "zone_b",
+      "too_hot",
+      2,
+      0.9,
+      "conference room is roasting",
+      "priya"
+    ],
+    [
+      "zone_d",
+      "too_cold",
+      1,
+      0.8,
+      "lobby is freezing at the desk",
+      "arun"
+    ]
+  ],
+  "control_interval_s": 60.0,
+  "ci95_note": "95% CI is mean +/- 1.96*sd/sqrt(n), a normal approximation. With n < 3 seeds it is indicative only and is reported as 0.0.",
+  "isolation_held": true,
+  "elapsed_s": 5.785,
+  "scenarios": {
+    "setpoint_up": {
+      "label": "Setpoint +1 degC",
+      "family": "control",
+      "help": "Let every occupied zone run one degree warmer than the schedule asks.",
+      "spec": {
+        "name": "Setpoint +1 degC",
+        "kind": "control",
+        "params": {
+          "setpoint_delta_c": 1.0
+        },
+        "horizon_h": 6.0,
+        "seeds": [
+          7,
+          8,
+          9
+        ]
+      },
+      "headline": "Setpoint +1 degC over 6 h x 3 seed(s): uses 3.33 kWh less (-6.3%), spends 111.67 occupied-min out of band more (baseline was zero, percent n/a).",
+      "baseline": {
+        "name": "Baseline (no change)",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "per_seed": [
+          {
+            "kwh": 49.4276,
+            "cost_rs": 444.849,
+            "co2_kg": 35.0936,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 14.0,
+            "mean_temp": 25.33,
+            "mean_rh": 88.578,
+            "interventions": 9,
+            "seed": 7,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 57.0167,
+            "cost_rs": 513.151,
+            "co2_kg": 40.4819,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 125.0,
+            "mean_temp": 25.35,
+            "mean_rh": 90.484,
+            "interventions": 9,
+            "seed": 8,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 50.9951,
+            "cost_rs": 458.956,
+            "co2_kg": 36.2065,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 15.0,
+            "mean_temp": 25.332,
+            "mean_rh": 88.563,
+            "interventions": 9,
+            "seed": 9,
+            "note": "no condition change | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "sd": {
+          "kwh": 4.0065,
+          "cost_rs": 36.0584,
+          "co2_kg": 2.8446,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 63.7992,
+          "mean_temp": 0.011,
+          "mean_rh": 1.1048,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.5338,
+          "cost_rs": 40.804,
+          "co2_kg": 3.219,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 72.1956,
+          "mean_temp": 0.0125,
+          "mean_rh": 1.2502,
+          "interventions": 0.0
+        }
+      },
+      "scenario": {
+        "name": "Setpoint +1 degC",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 49.15,
+          "cost_rs": 442.35,
+          "co2_kg": 34.8965,
+          "viol_min": 111.6667,
+          "hot_deg_min": 32.8173,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 5.6667,
+          "mean_temp": 26.1993,
+          "mean_rh": 88.9453,
+          "interventions": 10.0
+        },
+        "per_seed": [
+          {
+            "kwh": 46.0851,
+            "cost_rs": 414.766,
+            "co2_kg": 32.7204,
+            "viol_min": 110.0,
+            "hot_deg_min": 32.351,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 5.0,
+            "mean_temp": 26.196,
+            "mean_rh": 88.641,
+            "interventions": 10,
+            "seed": 7,
+            "note": "no condition change | occupied setpoint +1.00 degC"
+          },
+          {
+            "kwh": 53.7135,
+            "cost_rs": 483.421,
+            "co2_kg": 38.1366,
+            "viol_min": 114.0,
+            "hot_deg_min": 33.487,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 7.0,
+            "mean_temp": 26.204,
+            "mean_rh": 89.548,
+            "interventions": 10,
+            "seed": 8,
+            "note": "no condition change | occupied setpoint +1.00 degC"
+          },
+          {
+            "kwh": 47.6514,
+            "cost_rs": 428.863,
+            "co2_kg": 33.8325,
+            "viol_min": 111.0,
+            "hot_deg_min": 32.614,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 5.0,
+            "mean_temp": 26.198,
+            "mean_rh": 88.647,
+            "interventions": 10,
+            "seed": 9,
+            "note": "no condition change | occupied setpoint +1.00 degC"
+          }
+        ],
+        "mean": {
+          "kwh": 49.15,
+          "cost_rs": 442.35,
+          "co2_kg": 34.8965,
+          "viol_min": 111.6667,
+          "hot_deg_min": 32.8173,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 5.6667,
+          "mean_temp": 26.1993,
+          "mean_rh": 88.9453,
+          "interventions": 10.0
+        },
+        "sd": {
+          "kwh": 4.029,
+          "cost_rs": 36.2602,
+          "co2_kg": 2.8606,
+          "viol_min": 2.0817,
+          "hot_deg_min": 0.5947,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 1.1547,
+          "mean_temp": 0.0042,
+          "mean_rh": 0.5219,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.5592,
+          "cost_rs": 41.0323,
+          "co2_kg": 3.237,
+          "viol_min": 2.3556,
+          "hot_deg_min": 0.6729,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 1.3067,
+          "mean_temp": 0.0047,
+          "mean_rh": 0.5906,
+          "interventions": 0.0
+        }
+      },
+      "delta": {
+        "kwh": {
+          "baseline": 52.4798,
+          "scenario": 49.15,
+          "abs": -3.3298,
+          "pct": -6.34,
+          "verdict": "uses 3.33 kWh less (-6.3%)"
+        },
+        "cost_rs": {
+          "baseline": 472.3187,
+          "scenario": 442.35,
+          "abs": -29.9687,
+          "pct": -6.35,
+          "verdict": "costs 29.97 Rs less (-6.3%)"
+        },
+        "co2_kg": {
+          "baseline": 37.2607,
+          "scenario": 34.8965,
+          "abs": -2.3642,
+          "pct": -6.35,
+          "verdict": "emits 2.36 kgCO2 less (-6.3%)"
+        },
+        "viol_min": {
+          "baseline": 0.0,
+          "scenario": 111.6667,
+          "abs": 111.6667,
+          "pct": null,
+          "verdict": "spends 111.67 occupied-min out of band more (baseline was zero, percent n/a)"
+        },
+        "hot_deg_min": {
+          "baseline": 0.0,
+          "scenario": 32.8173,
+          "abs": 32.8173,
+          "pct": null,
+          "verdict": "accumulates 32.82 degC-min too hot more (baseline was zero, percent n/a)"
+        },
+        "cold_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too cold"
+        },
+        "humid_viol_min": {
+          "baseline": 1560.0,
+          "scenario": 1560.0,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "spends the same occupied-min above 65 %RH"
+        },
+        "at_capacity_min": {
+          "baseline": 51.3333,
+          "scenario": 5.6667,
+          "abs": -45.6666,
+          "pct": -88.96,
+          "verdict": "spends 45.67 occupied-min at full cooling capacity less (-89.0%)"
+        },
+        "mean_temp": {
+          "baseline": 25.3373,
+          "scenario": 26.1993,
+          "abs": 0.862,
+          "pct": 3.4,
+          "verdict": "runs 0.86 degC mean zone temperature more (+3.4%)"
+        },
+        "mean_rh": {
+          "baseline": 89.2083,
+          "scenario": 88.9453,
+          "abs": -0.263,
+          "pct": -0.29,
+          "verdict": "runs 0.26 %RH mean zone humidity less (-0.3%)"
+        },
+        "interventions": {
+          "baseline": 9.0,
+          "scenario": 10.0,
+          "abs": 1.0,
+          "pct": 11.11,
+          "verdict": "makes 1.00 setpoint changes more (+11.1%)"
+        }
+      }
+    },
+    "setpoint_down": {
+      "label": "Setpoint -1 degC",
+      "family": "control",
+      "help": "Cool every occupied zone one degree harder than the schedule asks.",
+      "spec": {
+        "name": "Setpoint -1 degC",
+        "kind": "control",
+        "params": {
+          "setpoint_delta_c": -1.0
+        },
+        "horizon_h": 6.0,
+        "seeds": [
+          7,
+          8,
+          9
+        ]
+      },
+      "headline": "Setpoint -1 degC over 6 h x 3 seed(s): uses 3.30 kWh more (+6.3%), spends the same occupied-min out of band.",
+      "baseline": {
+        "name": "Baseline (no change)",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "per_seed": [
+          {
+            "kwh": 49.4276,
+            "cost_rs": 444.849,
+            "co2_kg": 35.0936,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 14.0,
+            "mean_temp": 25.33,
+            "mean_rh": 88.578,
+            "interventions": 9,
+            "seed": 7,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 57.0167,
+            "cost_rs": 513.151,
+            "co2_kg": 40.4819,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 125.0,
+            "mean_temp": 25.35,
+            "mean_rh": 90.484,
+            "interventions": 9,
+            "seed": 8,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 50.9951,
+            "cost_rs": 458.956,
+            "co2_kg": 36.2065,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 15.0,
+            "mean_temp": 25.332,
+            "mean_rh": 88.563,
+            "interventions": 9,
+            "seed": 9,
+            "note": "no condition change | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "sd": {
+          "kwh": 4.0065,
+          "cost_rs": 36.0584,
+          "co2_kg": 2.8446,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 63.7992,
+          "mean_temp": 0.011,
+          "mean_rh": 1.1048,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.5338,
+          "cost_rs": 40.804,
+          "co2_kg": 3.219,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 72.1956,
+          "mean_temp": 0.0125,
+          "mean_rh": 1.2502,
+          "interventions": 0.0
+        }
+      },
+      "scenario": {
+        "name": "Setpoint -1 degC",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 55.7802,
+          "cost_rs": 502.0223,
+          "co2_kg": 39.604,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 98.6667,
+          "mean_temp": 24.483,
+          "mean_rh": 89.488,
+          "interventions": 12.0
+        },
+        "per_seed": [
+          {
+            "kwh": 52.7856,
+            "cost_rs": 475.071,
+            "co2_kg": 37.4778,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 41.0,
+            "mean_temp": 24.459,
+            "mean_rh": 88.637,
+            "interventions": 12,
+            "seed": 7,
+            "note": "no condition change | occupied setpoint -1.00 degC"
+          },
+          {
+            "kwh": 60.2038,
+            "cost_rs": 541.834,
+            "co2_kg": 42.7447,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 211.0,
+            "mean_temp": 24.528,
+            "mean_rh": 91.297,
+            "interventions": 12,
+            "seed": 8,
+            "note": "no condition change | occupied setpoint -1.00 degC"
+          },
+          {
+            "kwh": 54.3513,
+            "cost_rs": 489.162,
+            "co2_kg": 38.5895,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 44.0,
+            "mean_temp": 24.462,
+            "mean_rh": 88.53,
+            "interventions": 12,
+            "seed": 9,
+            "note": "no condition change | occupied setpoint -1.00 degC"
+          }
+        ],
+        "mean": {
+          "kwh": 55.7802,
+          "cost_rs": 502.0223,
+          "co2_kg": 39.604,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 98.6667,
+          "mean_temp": 24.483,
+          "mean_rh": 89.488,
+          "interventions": 12.0
+        },
+        "sd": {
+          "kwh": 3.9101,
+          "cost_rs": 35.1904,
+          "co2_kg": 2.7761,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 97.2951,
+          "mean_temp": 0.039,
+          "mean_rh": 1.5676,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.4247,
+          "cost_rs": 39.8217,
+          "co2_kg": 3.1415,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 110.0998,
+          "mean_temp": 0.0441,
+          "mean_rh": 1.7739,
+          "interventions": 0.0
+        }
+      },
+      "delta": {
+        "kwh": {
+          "baseline": 52.4798,
+          "scenario": 55.7802,
+          "abs": 3.3004,
+          "pct": 6.29,
+          "verdict": "uses 3.30 kWh more (+6.3%)"
+        },
+        "cost_rs": {
+          "baseline": 472.3187,
+          "scenario": 502.0223,
+          "abs": 29.7036,
+          "pct": 6.29,
+          "verdict": "costs 29.70 Rs more (+6.3%)"
+        },
+        "co2_kg": {
+          "baseline": 37.2607,
+          "scenario": 39.604,
+          "abs": 2.3433,
+          "pct": 6.29,
+          "verdict": "emits 2.34 kgCO2 more (+6.3%)"
+        },
+        "viol_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "spends the same occupied-min out of band"
+        },
+        "hot_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too hot"
+        },
+        "cold_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too cold"
+        },
+        "humid_viol_min": {
+          "baseline": 1560.0,
+          "scenario": 1560.0,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "spends the same occupied-min above 65 %RH"
+        },
+        "at_capacity_min": {
+          "baseline": 51.3333,
+          "scenario": 98.6667,
+          "abs": 47.3334,
+          "pct": 92.21,
+          "verdict": "spends 47.33 occupied-min at full cooling capacity more (+92.2%)"
+        },
+        "mean_temp": {
+          "baseline": 25.3373,
+          "scenario": 24.483,
+          "abs": -0.8543,
+          "pct": -3.37,
+          "verdict": "runs 0.85 degC mean zone temperature less (-3.4%)"
+        },
+        "mean_rh": {
+          "baseline": 89.2083,
+          "scenario": 89.488,
+          "abs": 0.2797,
+          "pct": 0.31,
+          "verdict": "runs 0.28 %RH mean zone humidity more (+0.3%)"
+        },
+        "interventions": {
+          "baseline": 9.0,
+          "scenario": 12.0,
+          "abs": 3.0,
+          "pct": 33.33,
+          "verdict": "makes 3.00 setpoint changes more (+33.3%)"
+        }
+      }
+    },
+    "occupancy_up": {
+      "label": "Occupancy +20%",
+      "family": "occupancy",
+      "help": "A busier day: 20% more people in every zone, so more body heat and moisture.",
+      "spec": {
+        "name": "Occupancy +20%",
+        "kind": "occupancy",
+        "params": {
+          "occ_scale": 1.2
+        },
+        "horizon_h": 6.0,
+        "seeds": [
+          7,
+          8,
+          9
+        ]
+      },
+      "headline": "Occupancy +20% over 6 h x 3 seed(s): uses 2.57 kWh more (+4.9%), spends the same occupied-min out of band.",
+      "baseline": {
+        "name": "Baseline (no change)",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "per_seed": [
+          {
+            "kwh": 49.4276,
+            "cost_rs": 444.849,
+            "co2_kg": 35.0936,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 14.0,
+            "mean_temp": 25.33,
+            "mean_rh": 88.578,
+            "interventions": 9,
+            "seed": 7,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 57.0167,
+            "cost_rs": 513.151,
+            "co2_kg": 40.4819,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 125.0,
+            "mean_temp": 25.35,
+            "mean_rh": 90.484,
+            "interventions": 9,
+            "seed": 8,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 50.9951,
+            "cost_rs": 458.956,
+            "co2_kg": 36.2065,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 15.0,
+            "mean_temp": 25.332,
+            "mean_rh": 88.563,
+            "interventions": 9,
+            "seed": 9,
+            "note": "no condition change | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "sd": {
+          "kwh": 4.0065,
+          "cost_rs": 36.0584,
+          "co2_kg": 2.8446,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 63.7992,
+          "mean_temp": 0.011,
+          "mean_rh": 1.1048,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.5338,
+          "cost_rs": 40.804,
+          "co2_kg": 3.219,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 72.1956,
+          "mean_temp": 0.0125,
+          "mean_rh": 1.2502,
+          "interventions": 0.0
+        }
+      },
+      "scenario": {
+        "name": "Occupancy +20%",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 55.0479,
+          "cost_rs": 495.431,
+          "co2_kg": 39.084,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 113.3333,
+          "mean_temp": 25.118,
+          "mean_rh": 89.4233,
+          "interventions": 15.0
+        },
+        "per_seed": [
+          {
+            "kwh": 52.1025,
+            "cost_rs": 468.922,
+            "co2_kg": 36.9928,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 34.0,
+            "mean_temp": 25.082,
+            "mean_rh": 88.568,
+            "interventions": 15,
+            "seed": 7,
+            "note": "occ_scale x1.20 -> 1.20 | unperturbed controller"
+          },
+          {
+            "kwh": 59.3857,
+            "cost_rs": 534.471,
+            "co2_kg": 42.1638,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 186.0,
+            "mean_temp": 25.184,
+            "mean_rh": 91.162,
+            "interventions": 15,
+            "seed": 8,
+            "note": "occ_scale x1.20 -> 1.20 | unperturbed controller"
+          },
+          {
+            "kwh": 53.6555,
+            "cost_rs": 482.9,
+            "co2_kg": 38.0954,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 120.0,
+            "mean_temp": 25.088,
+            "mean_rh": 88.54,
+            "interventions": 15,
+            "seed": 9,
+            "note": "occ_scale x1.20 -> 1.20 | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 55.0479,
+          "cost_rs": 495.431,
+          "co2_kg": 39.084,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 113.3333,
+          "mean_temp": 25.118,
+          "mean_rh": 89.4233,
+          "interventions": 15.0
+        },
+        "sd": {
+          "kwh": 3.8361,
+          "cost_rs": 34.5244,
+          "co2_kg": 2.7236,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 76.219,
+          "mean_temp": 0.0572,
+          "mean_rh": 1.5058,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.3409,
+          "cost_rs": 39.0681,
+          "co2_kg": 3.082,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 86.2499,
+          "mean_temp": 0.0648,
+          "mean_rh": 1.704,
+          "interventions": 0.0
+        }
+      },
+      "delta": {
+        "kwh": {
+          "baseline": 52.4798,
+          "scenario": 55.0479,
+          "abs": 2.5681,
+          "pct": 4.89,
+          "verdict": "uses 2.57 kWh more (+4.9%)"
+        },
+        "cost_rs": {
+          "baseline": 472.3187,
+          "scenario": 495.431,
+          "abs": 23.1123,
+          "pct": 4.89,
+          "verdict": "costs 23.11 Rs more (+4.9%)"
+        },
+        "co2_kg": {
+          "baseline": 37.2607,
+          "scenario": 39.084,
+          "abs": 1.8233,
+          "pct": 4.89,
+          "verdict": "emits 1.82 kgCO2 more (+4.9%)"
+        },
+        "viol_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "spends the same occupied-min out of band"
+        },
+        "hot_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too hot"
+        },
+        "cold_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too cold"
+        },
+        "humid_viol_min": {
+          "baseline": 1560.0,
+          "scenario": 1560.0,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "spends the same occupied-min above 65 %RH"
+        },
+        "at_capacity_min": {
+          "baseline": 51.3333,
+          "scenario": 113.3333,
+          "abs": 62.0,
+          "pct": 120.78,
+          "verdict": "spends 62.00 occupied-min at full cooling capacity more (+120.8%)"
+        },
+        "mean_temp": {
+          "baseline": 25.3373,
+          "scenario": 25.118,
+          "abs": -0.2193,
+          "pct": -0.87,
+          "verdict": "runs 0.22 degC mean zone temperature less (-0.9%)"
+        },
+        "mean_rh": {
+          "baseline": 89.2083,
+          "scenario": 89.4233,
+          "abs": 0.215,
+          "pct": 0.24,
+          "verdict": "runs 0.22 %RH mean zone humidity more (+0.2%)"
+        },
+        "interventions": {
+          "baseline": 9.0,
+          "scenario": 15.0,
+          "abs": 6.0,
+          "pct": 66.67,
+          "verdict": "makes 6.00 setpoint changes more (+66.7%)"
+        }
+      }
+    },
+    "occupancy_down": {
+      "label": "Occupancy -20%",
+      "family": "occupancy",
+      "help": "A quieter day: 20% fewer people in every zone.",
+      "spec": {
+        "name": "Occupancy -20%",
+        "kind": "occupancy",
+        "params": {
+          "occ_scale": 0.8
+        },
+        "horizon_h": 6.0,
+        "seeds": [
+          7,
+          8,
+          9
+        ]
+      },
+      "headline": "Occupancy -20% over 6 h x 3 seed(s): uses 3.84 kWh less (-7.3%), spends the same occupied-min out of band.",
+      "baseline": {
+        "name": "Baseline (no change)",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "per_seed": [
+          {
+            "kwh": 49.4276,
+            "cost_rs": 444.849,
+            "co2_kg": 35.0936,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 14.0,
+            "mean_temp": 25.33,
+            "mean_rh": 88.578,
+            "interventions": 9,
+            "seed": 7,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 57.0167,
+            "cost_rs": 513.151,
+            "co2_kg": 40.4819,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 125.0,
+            "mean_temp": 25.35,
+            "mean_rh": 90.484,
+            "interventions": 9,
+            "seed": 8,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 50.9951,
+            "cost_rs": 458.956,
+            "co2_kg": 36.2065,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 15.0,
+            "mean_temp": 25.332,
+            "mean_rh": 88.563,
+            "interventions": 9,
+            "seed": 9,
+            "note": "no condition change | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "sd": {
+          "kwh": 4.0065,
+          "cost_rs": 36.0584,
+          "co2_kg": 2.8446,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 63.7992,
+          "mean_temp": 0.011,
+          "mean_rh": 1.1048,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.5338,
+          "cost_rs": 40.804,
+          "co2_kg": 3.219,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 72.1956,
+          "mean_temp": 0.0125,
+          "mean_rh": 1.2502,
+          "interventions": 0.0
+        }
+      },
+      "scenario": {
+        "name": "Occupancy -20%",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 48.6433,
+          "cost_rs": 437.7897,
+          "co2_kg": 34.5367,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 15.0,
+          "mean_temp": 25.3327,
+          "mean_rh": 88.9323,
+          "interventions": 9.0
+        },
+        "per_seed": [
+          {
+            "kwh": 45.6457,
+            "cost_rs": 410.812,
+            "co2_kg": 32.4085,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 14.0,
+            "mean_temp": 25.329,
+            "mean_rh": 88.57,
+            "interventions": 9,
+            "seed": 7,
+            "note": "occ_scale x0.80 -> 0.80 | unperturbed controller"
+          },
+          {
+            "kwh": 53.1062,
+            "cost_rs": 477.956,
+            "co2_kg": 37.7054,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 17.0,
+            "mean_temp": 25.338,
+            "mean_rh": 89.666,
+            "interventions": 9,
+            "seed": 8,
+            "note": "occ_scale x0.80 -> 0.80 | unperturbed controller"
+          },
+          {
+            "kwh": 47.1779,
+            "cost_rs": 424.601,
+            "co2_kg": 33.4963,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 14.0,
+            "mean_temp": 25.331,
+            "mean_rh": 88.561,
+            "interventions": 9,
+            "seed": 9,
+            "note": "occ_scale x0.80 -> 0.80 | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 48.6433,
+          "cost_rs": 437.7897,
+          "co2_kg": 34.5367,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 15.0,
+          "mean_temp": 25.3327,
+          "mean_rh": 88.9323,
+          "interventions": 9.0
+        },
+        "sd": {
+          "kwh": 3.9402,
+          "cost_rs": 35.4617,
+          "co2_kg": 2.7975,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 1.7321,
+          "mean_temp": 0.0047,
+          "mean_rh": 0.6354,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.4588,
+          "cost_rs": 40.1287,
+          "co2_kg": 3.1657,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 1.96,
+          "mean_temp": 0.0053,
+          "mean_rh": 0.719,
+          "interventions": 0.0
+        }
+      },
+      "delta": {
+        "kwh": {
+          "baseline": 52.4798,
+          "scenario": 48.6433,
+          "abs": -3.8365,
+          "pct": -7.31,
+          "verdict": "uses 3.84 kWh less (-7.3%)"
+        },
+        "cost_rs": {
+          "baseline": 472.3187,
+          "scenario": 437.7897,
+          "abs": -34.529,
+          "pct": -7.31,
+          "verdict": "costs 34.53 Rs less (-7.3%)"
+        },
+        "co2_kg": {
+          "baseline": 37.2607,
+          "scenario": 34.5367,
+          "abs": -2.724,
+          "pct": -7.31,
+          "verdict": "emits 2.72 kgCO2 less (-7.3%)"
+        },
+        "viol_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "spends the same occupied-min out of band"
+        },
+        "hot_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too hot"
+        },
+        "cold_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too cold"
+        },
+        "humid_viol_min": {
+          "baseline": 1560.0,
+          "scenario": 1560.0,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "spends the same occupied-min above 65 %RH"
+        },
+        "at_capacity_min": {
+          "baseline": 51.3333,
+          "scenario": 15.0,
+          "abs": -36.3333,
+          "pct": -70.78,
+          "verdict": "spends 36.33 occupied-min at full cooling capacity less (-70.8%)"
+        },
+        "mean_temp": {
+          "baseline": 25.3373,
+          "scenario": 25.3327,
+          "abs": -0.0046,
+          "pct": -0.02,
+          "verdict": "runs 0.005 degC mean zone temperature less (-0.0%)"
+        },
+        "mean_rh": {
+          "baseline": 89.2083,
+          "scenario": 88.9323,
+          "abs": -0.276,
+          "pct": -0.31,
+          "verdict": "runs 0.28 %RH mean zone humidity less (-0.3%)"
+        },
+        "interventions": {
+          "baseline": 9.0,
+          "scenario": 9.0,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "makes the same setpoint changes"
+        }
+      }
+    },
+    "outdoor_hotter": {
+      "label": "Heat wave +3 degC",
+      "family": "weather",
+      "help": "Every outdoor temperature reading is three degrees hotter all day.",
+      "spec": {
+        "name": "Heat wave +3 degC",
+        "kind": "weather",
+        "params": {
+          "outdoor_offset": 3.0
+        },
+        "horizon_h": 6.0,
+        "seeds": [
+          7,
+          8,
+          9
+        ]
+      },
+      "headline": "Heat wave +3 degC over 6 h x 3 seed(s): uses 8.54 kWh more (+16.3%), spends 37.33 occupied-min out of band more (baseline was zero, percent n/a).",
+      "baseline": {
+        "name": "Baseline (no change)",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "per_seed": [
+          {
+            "kwh": 49.4276,
+            "cost_rs": 444.849,
+            "co2_kg": 35.0936,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 14.0,
+            "mean_temp": 25.33,
+            "mean_rh": 88.578,
+            "interventions": 9,
+            "seed": 7,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 57.0167,
+            "cost_rs": 513.151,
+            "co2_kg": 40.4819,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 125.0,
+            "mean_temp": 25.35,
+            "mean_rh": 90.484,
+            "interventions": 9,
+            "seed": 8,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 50.9951,
+            "cost_rs": 458.956,
+            "co2_kg": 36.2065,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 15.0,
+            "mean_temp": 25.332,
+            "mean_rh": 88.563,
+            "interventions": 9,
+            "seed": 9,
+            "note": "no condition change | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "sd": {
+          "kwh": 4.0065,
+          "cost_rs": 36.0584,
+          "co2_kg": 2.8446,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 63.7992,
+          "mean_temp": 0.011,
+          "mean_rh": 1.1048,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.5338,
+          "cost_rs": 40.804,
+          "co2_kg": 3.219,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 72.1956,
+          "mean_temp": 0.0125,
+          "mean_rh": 1.2502,
+          "interventions": 0.0
+        }
+      },
+      "scenario": {
+        "name": "Heat wave +3 degC",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 61.02,
+          "cost_rs": 549.1803,
+          "co2_kg": 43.3242,
+          "viol_min": 37.3333,
+          "hot_deg_min": 23.346,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 177.6667,
+          "mean_temp": 25.4207,
+          "mean_rh": 91.65,
+          "interventions": 9.0
+        },
+        "per_seed": [
+          {
+            "kwh": 58.1493,
+            "cost_rs": 523.344,
+            "co2_kg": 41.286,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 157.0,
+            "mean_temp": 25.365,
+            "mean_rh": 90.625,
+            "interventions": 9,
+            "seed": 7,
+            "note": "outdoor_offset +3.00 -> +3.00 | unperturbed controller"
+          },
+          {
+            "kwh": 65.2877,
+            "cost_rs": 587.589,
+            "co2_kg": 46.3542,
+            "viol_min": 112.0,
+            "hot_deg_min": 70.038,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 202.0,
+            "mean_temp": 25.505,
+            "mean_rh": 94.342,
+            "interventions": 9,
+            "seed": 8,
+            "note": "outdoor_offset +3.00 -> +3.00 | unperturbed controller"
+          },
+          {
+            "kwh": 59.6231,
+            "cost_rs": 536.608,
+            "co2_kg": 42.3324,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 174.0,
+            "mean_temp": 25.392,
+            "mean_rh": 89.983,
+            "interventions": 9,
+            "seed": 9,
+            "note": "outdoor_offset +3.00 -> +3.00 | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 61.02,
+          "cost_rs": 549.1803,
+          "co2_kg": 43.3242,
+          "viol_min": 37.3333,
+          "hot_deg_min": 23.346,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 177.6667,
+          "mean_temp": 25.4207,
+          "mean_rh": 91.65,
+          "interventions": 9.0
+        },
+        "sd": {
+          "kwh": 3.7687,
+          "cost_rs": 33.9176,
+          "co2_kg": 2.6757,
+          "viol_min": 64.6632,
+          "hot_deg_min": 40.4365,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 22.723,
+          "mean_temp": 0.0743,
+          "mean_rh": 2.3533,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.2646,
+          "cost_rs": 38.3814,
+          "co2_kg": 3.0278,
+          "viol_min": 73.1733,
+          "hot_deg_min": 45.7582,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 25.7135,
+          "mean_temp": 0.084,
+          "mean_rh": 2.6631,
+          "interventions": 0.0
+        }
+      },
+      "delta": {
+        "kwh": {
+          "baseline": 52.4798,
+          "scenario": 61.02,
+          "abs": 8.5402,
+          "pct": 16.27,
+          "verdict": "uses 8.54 kWh more (+16.3%)"
+        },
+        "cost_rs": {
+          "baseline": 472.3187,
+          "scenario": 549.1803,
+          "abs": 76.8616,
+          "pct": 16.27,
+          "verdict": "costs 76.86 Rs more (+16.3%)"
+        },
+        "co2_kg": {
+          "baseline": 37.2607,
+          "scenario": 43.3242,
+          "abs": 6.0635,
+          "pct": 16.27,
+          "verdict": "emits 6.06 kgCO2 more (+16.3%)"
+        },
+        "viol_min": {
+          "baseline": 0.0,
+          "scenario": 37.3333,
+          "abs": 37.3333,
+          "pct": null,
+          "verdict": "spends 37.33 occupied-min out of band more (baseline was zero, percent n/a)"
+        },
+        "hot_deg_min": {
+          "baseline": 0.0,
+          "scenario": 23.346,
+          "abs": 23.346,
+          "pct": null,
+          "verdict": "accumulates 23.35 degC-min too hot more (baseline was zero, percent n/a)"
+        },
+        "cold_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too cold"
+        },
+        "humid_viol_min": {
+          "baseline": 1560.0,
+          "scenario": 1560.0,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "spends the same occupied-min above 65 %RH"
+        },
+        "at_capacity_min": {
+          "baseline": 51.3333,
+          "scenario": 177.6667,
+          "abs": 126.3334,
+          "pct": 246.1,
+          "verdict": "spends 126.33 occupied-min at full cooling capacity more (+246.1%)"
+        },
+        "mean_temp": {
+          "baseline": 25.3373,
+          "scenario": 25.4207,
+          "abs": 0.0834,
+          "pct": 0.33,
+          "verdict": "runs 0.08 degC mean zone temperature more (+0.3%)"
+        },
+        "mean_rh": {
+          "baseline": 89.2083,
+          "scenario": 91.65,
+          "abs": 2.4417,
+          "pct": 2.74,
+          "verdict": "runs 2.44 %RH mean zone humidity more (+2.7%)"
+        },
+        "interventions": {
+          "baseline": 9.0,
+          "scenario": 9.0,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "makes the same setpoint changes"
+        }
+      }
+    },
+    "humidity_up": {
+      "label": "Monsoon +15 %RH",
+      "family": "weather",
+      "help": "Outdoor air carries 15 percentage points more relative humidity.",
+      "spec": {
+        "name": "Monsoon +15 %RH",
+        "kind": "weather",
+        "params": {
+          "humidity_offset": 15.0
+        },
+        "horizon_h": 6.0,
+        "seeds": [
+          7,
+          8,
+          9
+        ]
+      },
+      "headline": "Monsoon +15 %RH over 6 h x 3 seed(s): uses the same kWh, spends the same occupied-min out of band.",
+      "baseline": {
+        "name": "Baseline (no change)",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "per_seed": [
+          {
+            "kwh": 49.4276,
+            "cost_rs": 444.849,
+            "co2_kg": 35.0936,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 14.0,
+            "mean_temp": 25.33,
+            "mean_rh": 88.578,
+            "interventions": 9,
+            "seed": 7,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 57.0167,
+            "cost_rs": 513.151,
+            "co2_kg": 40.4819,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 125.0,
+            "mean_temp": 25.35,
+            "mean_rh": 90.484,
+            "interventions": 9,
+            "seed": 8,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 50.9951,
+            "cost_rs": 458.956,
+            "co2_kg": 36.2065,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 15.0,
+            "mean_temp": 25.332,
+            "mean_rh": 88.563,
+            "interventions": 9,
+            "seed": 9,
+            "note": "no condition change | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "sd": {
+          "kwh": 4.0065,
+          "cost_rs": 36.0584,
+          "co2_kg": 2.8446,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 63.7992,
+          "mean_temp": 0.011,
+          "mean_rh": 1.1048,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.5338,
+          "cost_rs": 40.804,
+          "co2_kg": 3.219,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 72.1956,
+          "mean_temp": 0.0125,
+          "mean_rh": 1.2502,
+          "interventions": 0.0
+        }
+      },
+      "scenario": {
+        "name": "Monsoon +15 %RH",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 95.826,
+          "interventions": 9.0
+        },
+        "per_seed": [
+          {
+            "kwh": 49.4276,
+            "cost_rs": 444.849,
+            "co2_kg": 35.0936,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 14.0,
+            "mean_temp": 25.33,
+            "mean_rh": 95.05,
+            "interventions": 9,
+            "seed": 7,
+            "note": "humidity_offset +15.00 -> +15.00 | unperturbed controller"
+          },
+          {
+            "kwh": 57.0167,
+            "cost_rs": 513.151,
+            "co2_kg": 40.4819,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 125.0,
+            "mean_temp": 25.35,
+            "mean_rh": 97.603,
+            "interventions": 9,
+            "seed": 8,
+            "note": "humidity_offset +15.00 -> +15.00 | unperturbed controller"
+          },
+          {
+            "kwh": 50.9951,
+            "cost_rs": 458.956,
+            "co2_kg": 36.2065,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 15.0,
+            "mean_temp": 25.332,
+            "mean_rh": 94.825,
+            "interventions": 9,
+            "seed": 9,
+            "note": "humidity_offset +15.00 -> +15.00 | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 95.826,
+          "interventions": 9.0
+        },
+        "sd": {
+          "kwh": 4.0065,
+          "cost_rs": 36.0584,
+          "co2_kg": 2.8446,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 63.7992,
+          "mean_temp": 0.011,
+          "mean_rh": 1.543,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.5338,
+          "cost_rs": 40.804,
+          "co2_kg": 3.219,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 72.1956,
+          "mean_temp": 0.0125,
+          "mean_rh": 1.7461,
+          "interventions": 0.0
+        }
+      },
+      "delta": {
+        "kwh": {
+          "baseline": 52.4798,
+          "scenario": 52.4798,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "uses the same kWh"
+        },
+        "cost_rs": {
+          "baseline": 472.3187,
+          "scenario": 472.3187,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "costs the same Rs"
+        },
+        "co2_kg": {
+          "baseline": 37.2607,
+          "scenario": 37.2607,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "emits the same kgCO2"
+        },
+        "viol_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "spends the same occupied-min out of band"
+        },
+        "hot_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too hot"
+        },
+        "cold_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too cold"
+        },
+        "humid_viol_min": {
+          "baseline": 1560.0,
+          "scenario": 1560.0,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "spends the same occupied-min above 65 %RH"
+        },
+        "at_capacity_min": {
+          "baseline": 51.3333,
+          "scenario": 51.3333,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "spends the same occupied-min at full cooling capacity"
+        },
+        "mean_temp": {
+          "baseline": 25.3373,
+          "scenario": 25.3373,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "runs the same degC mean zone temperature"
+        },
+        "mean_rh": {
+          "baseline": 89.2083,
+          "scenario": 95.826,
+          "abs": 6.6177,
+          "pct": 7.42,
+          "verdict": "runs 6.62 %RH mean zone humidity more (+7.4%)"
+        },
+        "interventions": {
+          "baseline": 9.0,
+          "scenario": 9.0,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "makes the same setpoint changes"
+        }
+      }
+    },
+    "capacity_loss": {
+      "label": "Cooling capacity 70%",
+      "family": "equipment",
+      "help": "The plant can only deliver 70% of its rated cooling, as if filters were fouled.",
+      "spec": {
+        "name": "Cooling capacity 70%",
+        "kind": "equipment",
+        "params": {
+          "capacity_scale": 0.7
+        },
+        "horizon_h": 6.0,
+        "seeds": [
+          7,
+          8,
+          9
+        ]
+      },
+      "headline": "Cooling capacity 70% over 6 h x 3 seed(s): uses 1.56 kWh less (-3.0%), spends 206.00 occupied-min out of band more (baseline was zero, percent n/a).",
+      "baseline": {
+        "name": "Baseline (no change)",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "per_seed": [
+          {
+            "kwh": 49.4276,
+            "cost_rs": 444.849,
+            "co2_kg": 35.0936,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 14.0,
+            "mean_temp": 25.33,
+            "mean_rh": 88.578,
+            "interventions": 9,
+            "seed": 7,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 57.0167,
+            "cost_rs": 513.151,
+            "co2_kg": 40.4819,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 125.0,
+            "mean_temp": 25.35,
+            "mean_rh": 90.484,
+            "interventions": 9,
+            "seed": 8,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 50.9951,
+            "cost_rs": 458.956,
+            "co2_kg": 36.2065,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 15.0,
+            "mean_temp": 25.332,
+            "mean_rh": 88.563,
+            "interventions": 9,
+            "seed": 9,
+            "note": "no condition change | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "sd": {
+          "kwh": 4.0065,
+          "cost_rs": 36.0584,
+          "co2_kg": 2.8446,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 63.7992,
+          "mean_temp": 0.011,
+          "mean_rh": 1.1048,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.5338,
+          "cost_rs": 40.804,
+          "co2_kg": 3.219,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 72.1956,
+          "mean_temp": 0.0125,
+          "mean_rh": 1.2502,
+          "interventions": 0.0
+        }
+      },
+      "scenario": {
+        "name": "Cooling capacity 70%",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 50.9194,
+          "cost_rs": 458.2747,
+          "co2_kg": 36.1528,
+          "viol_min": 206.0,
+          "hot_deg_min": 322.6607,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 541.3333,
+          "mean_temp": 25.7923,
+          "mean_rh": 87.4033,
+          "interventions": 9.0
+        },
+        "per_seed": [
+          {
+            "kwh": 48.4289,
+            "cost_rs": 435.86,
+            "co2_kg": 34.3845,
+            "viol_min": 137.0,
+            "hot_deg_min": 187.503,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 426.0,
+            "mean_temp": 25.612,
+            "mean_rh": 87.408,
+            "interventions": 9,
+            "seed": 7,
+            "note": "capacity_scale x0.70 -> 0.70 | unperturbed controller"
+          },
+          {
+            "kwh": 54.5774,
+            "cost_rs": 491.197,
+            "co2_kg": 38.75,
+            "viol_min": 335.0,
+            "hot_deg_min": 540.77,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 736.0,
+            "mean_temp": 26.077,
+            "mean_rh": 87.792,
+            "interventions": 9,
+            "seed": 8,
+            "note": "capacity_scale x0.70 -> 0.70 | unperturbed controller"
+          },
+          {
+            "kwh": 49.7519,
+            "cost_rs": 447.767,
+            "co2_kg": 35.3238,
+            "viol_min": 146.0,
+            "hot_deg_min": 239.709,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 462.0,
+            "mean_temp": 25.688,
+            "mean_rh": 87.01,
+            "interventions": 9,
+            "seed": 9,
+            "note": "capacity_scale x0.70 -> 0.70 | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 50.9194,
+          "cost_rs": 458.2747,
+          "co2_kg": 36.1528,
+          "viol_min": 206.0,
+          "hot_deg_min": 322.6607,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 541.3333,
+          "mean_temp": 25.7923,
+          "mean_rh": 87.4033,
+          "interventions": 9.0
+        },
+        "sd": {
+          "kwh": 3.2362,
+          "cost_rs": 29.1265,
+          "co2_kg": 2.2978,
+          "viol_min": 111.8079,
+          "hot_deg_min": 190.6833,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 169.5445,
+          "mean_temp": 0.2494,
+          "mean_rh": 0.391,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 3.6622,
+          "cost_rs": 32.9598,
+          "co2_kg": 2.6002,
+          "viol_min": 126.5225,
+          "hot_deg_min": 215.7785,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 191.8576,
+          "mean_temp": 0.2823,
+          "mean_rh": 0.4425,
+          "interventions": 0.0
+        }
+      },
+      "delta": {
+        "kwh": {
+          "baseline": 52.4798,
+          "scenario": 50.9194,
+          "abs": -1.5604,
+          "pct": -2.97,
+          "verdict": "uses 1.56 kWh less (-3.0%)"
+        },
+        "cost_rs": {
+          "baseline": 472.3187,
+          "scenario": 458.2747,
+          "abs": -14.044,
+          "pct": -2.97,
+          "verdict": "costs 14.04 Rs less (-3.0%)"
+        },
+        "co2_kg": {
+          "baseline": 37.2607,
+          "scenario": 36.1528,
+          "abs": -1.1079,
+          "pct": -2.97,
+          "verdict": "emits 1.11 kgCO2 less (-3.0%)"
+        },
+        "viol_min": {
+          "baseline": 0.0,
+          "scenario": 206.0,
+          "abs": 206.0,
+          "pct": null,
+          "verdict": "spends 206.00 occupied-min out of band more (baseline was zero, percent n/a)"
+        },
+        "hot_deg_min": {
+          "baseline": 0.0,
+          "scenario": 322.6607,
+          "abs": 322.6607,
+          "pct": null,
+          "verdict": "accumulates 322.66 degC-min too hot more (baseline was zero, percent n/a)"
+        },
+        "cold_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too cold"
+        },
+        "humid_viol_min": {
+          "baseline": 1560.0,
+          "scenario": 1560.0,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "spends the same occupied-min above 65 %RH"
+        },
+        "at_capacity_min": {
+          "baseline": 51.3333,
+          "scenario": 541.3333,
+          "abs": 490.0,
+          "pct": 954.55,
+          "verdict": "spends 490.00 occupied-min at full cooling capacity more (+954.5%)"
+        },
+        "mean_temp": {
+          "baseline": 25.3373,
+          "scenario": 25.7923,
+          "abs": 0.455,
+          "pct": 1.8,
+          "verdict": "runs 0.46 degC mean zone temperature more (+1.8%)"
+        },
+        "mean_rh": {
+          "baseline": 89.2083,
+          "scenario": 87.4033,
+          "abs": -1.805,
+          "pct": -2.02,
+          "verdict": "runs 1.80 %RH mean zone humidity less (-2.0%)"
+        },
+        "interventions": {
+          "baseline": 9.0,
+          "scenario": 9.0,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "makes the same setpoint changes"
+        }
+      }
+    },
+    "ignore_complaint": {
+      "label": "Ignore all complaints",
+      "family": "constraint",
+      "help": "Run the same building with the complaint queue emptied, to price what listening costs.",
+      "spec": {
+        "name": "Ignore all complaints",
+        "kind": "constraint",
+        "params": {
+          "drop_constraints": true
+        },
+        "horizon_h": 6.0,
+        "seeds": [
+          7,
+          8,
+          9
+        ]
+      },
+      "headline": "Ignore all complaints over 6 h x 3 seed(s): uses 0.06 kWh more (+0.1%), spends the same occupied-min out of band.",
+      "baseline": {
+        "name": "Baseline (no change)",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "per_seed": [
+          {
+            "kwh": 49.4276,
+            "cost_rs": 444.849,
+            "co2_kg": 35.0936,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 14.0,
+            "mean_temp": 25.33,
+            "mean_rh": 88.578,
+            "interventions": 9,
+            "seed": 7,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 57.0167,
+            "cost_rs": 513.151,
+            "co2_kg": 40.4819,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 125.0,
+            "mean_temp": 25.35,
+            "mean_rh": 90.484,
+            "interventions": 9,
+            "seed": 8,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 50.9951,
+            "cost_rs": 458.956,
+            "co2_kg": 36.2065,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 15.0,
+            "mean_temp": 25.332,
+            "mean_rh": 88.563,
+            "interventions": 9,
+            "seed": 9,
+            "note": "no condition change | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "sd": {
+          "kwh": 4.0065,
+          "cost_rs": 36.0584,
+          "co2_kg": 2.8446,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 63.7992,
+          "mean_temp": 0.011,
+          "mean_rh": 1.1048,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.5338,
+          "cost_rs": 40.804,
+          "co2_kg": 3.219,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 72.1956,
+          "mean_temp": 0.0125,
+          "mean_rh": 1.2502,
+          "interventions": 0.0
+        }
+      },
+      "scenario": {
+        "name": "Ignore all complaints",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 52.5372,
+          "cost_rs": 472.8343,
+          "co2_kg": 37.3014,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 42.6667,
+          "mean_temp": 25.3607,
+          "mean_rh": 89.1657,
+          "interventions": 6.0
+        },
+        "per_seed": [
+          {
+            "kwh": 49.4811,
+            "cost_rs": 445.33,
+            "co2_kg": 35.1316,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 9.0,
+            "mean_temp": 25.354,
+            "mean_rh": 88.537,
+            "interventions": 6,
+            "seed": 7,
+            "note": "dropped 2 constraint(s) | unperturbed controller"
+          },
+          {
+            "kwh": 57.0817,
+            "cost_rs": 513.735,
+            "co2_kg": 40.528,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 110.0,
+            "mean_temp": 25.372,
+            "mean_rh": 90.438,
+            "interventions": 6,
+            "seed": 8,
+            "note": "dropped 2 constraint(s) | unperturbed controller"
+          },
+          {
+            "kwh": 51.0487,
+            "cost_rs": 459.438,
+            "co2_kg": 36.2445,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 9.0,
+            "mean_temp": 25.356,
+            "mean_rh": 88.522,
+            "interventions": 6,
+            "seed": 9,
+            "note": "dropped 2 constraint(s) | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 52.5372,
+          "cost_rs": 472.8343,
+          "co2_kg": 37.3014,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 42.6667,
+          "mean_temp": 25.3607,
+          "mean_rh": 89.1657,
+          "interventions": 6.0
+        },
+        "sd": {
+          "kwh": 4.013,
+          "cost_rs": 36.1166,
+          "co2_kg": 2.8492,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 58.3124,
+          "mean_temp": 0.0099,
+          "mean_rh": 1.1019,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.5411,
+          "cost_rs": 40.8698,
+          "co2_kg": 3.2242,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 65.9867,
+          "mean_temp": 0.0112,
+          "mean_rh": 1.2469,
+          "interventions": 0.0
+        }
+      },
+      "delta": {
+        "kwh": {
+          "baseline": 52.4798,
+          "scenario": 52.5372,
+          "abs": 0.0574,
+          "pct": 0.11,
+          "verdict": "uses 0.06 kWh more (+0.1%)"
+        },
+        "cost_rs": {
+          "baseline": 472.3187,
+          "scenario": 472.8343,
+          "abs": 0.5156,
+          "pct": 0.11,
+          "verdict": "costs 0.52 Rs more (+0.1%)"
+        },
+        "co2_kg": {
+          "baseline": 37.2607,
+          "scenario": 37.3014,
+          "abs": 0.0407,
+          "pct": 0.11,
+          "verdict": "emits 0.04 kgCO2 more (+0.1%)"
+        },
+        "viol_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "spends the same occupied-min out of band"
+        },
+        "hot_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too hot"
+        },
+        "cold_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too cold"
+        },
+        "humid_viol_min": {
+          "baseline": 1560.0,
+          "scenario": 1560.0,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "spends the same occupied-min above 65 %RH"
+        },
+        "at_capacity_min": {
+          "baseline": 51.3333,
+          "scenario": 42.6667,
+          "abs": -8.6666,
+          "pct": -16.88,
+          "verdict": "spends 8.67 occupied-min at full cooling capacity less (-16.9%)"
+        },
+        "mean_temp": {
+          "baseline": 25.3373,
+          "scenario": 25.3607,
+          "abs": 0.0234,
+          "pct": 0.09,
+          "verdict": "runs 0.02 degC mean zone temperature more (+0.1%)"
+        },
+        "mean_rh": {
+          "baseline": 89.2083,
+          "scenario": 89.1657,
+          "abs": -0.0426,
+          "pct": -0.05,
+          "verdict": "runs 0.04 %RH mean zone humidity less (-0.0%)"
+        },
+        "interventions": {
+          "baseline": 9.0,
+          "scenario": 6.0,
+          "abs": -3.0,
+          "pct": -33.33,
+          "verdict": "makes 3.00 setpoint changes less (-33.3%)"
+        }
+      }
+    },
+    "complaint_expires": {
+      "label": "Complaints already expired",
+      "family": "constraint",
+      "help": "Back-date every complaint past its two-hour expiry, so its influence has already faded.",
+      "spec": {
+        "name": "Complaints already expired",
+        "kind": "constraint",
+        "params": {
+          "age_constraints_s": 7260.0
+        },
+        "horizon_h": 6.0,
+        "seeds": [
+          7,
+          8,
+          9
+        ]
+      },
+      "headline": "Complaints already expired over 6 h x 3 seed(s): uses 0.06 kWh more (+0.1%), spends the same occupied-min out of band.",
+      "baseline": {
+        "name": "Baseline (no change)",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "per_seed": [
+          {
+            "kwh": 49.4276,
+            "cost_rs": 444.849,
+            "co2_kg": 35.0936,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 14.0,
+            "mean_temp": 25.33,
+            "mean_rh": 88.578,
+            "interventions": 9,
+            "seed": 7,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 57.0167,
+            "cost_rs": 513.151,
+            "co2_kg": 40.4819,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 125.0,
+            "mean_temp": 25.35,
+            "mean_rh": 90.484,
+            "interventions": 9,
+            "seed": 8,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 50.9951,
+            "cost_rs": 458.956,
+            "co2_kg": 36.2065,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 15.0,
+            "mean_temp": 25.332,
+            "mean_rh": 88.563,
+            "interventions": 9,
+            "seed": 9,
+            "note": "no condition change | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "sd": {
+          "kwh": 4.0065,
+          "cost_rs": 36.0584,
+          "co2_kg": 2.8446,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 63.7992,
+          "mean_temp": 0.011,
+          "mean_rh": 1.1048,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.5338,
+          "cost_rs": 40.804,
+          "co2_kg": 3.219,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 72.1956,
+          "mean_temp": 0.0125,
+          "mean_rh": 1.2502,
+          "interventions": 0.0
+        }
+      },
+      "scenario": {
+        "name": "Complaints already expired",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 52.5372,
+          "cost_rs": 472.8343,
+          "co2_kg": 37.3014,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 42.6667,
+          "mean_temp": 25.3607,
+          "mean_rh": 89.1657,
+          "interventions": 6.0
+        },
+        "per_seed": [
+          {
+            "kwh": 49.4811,
+            "cost_rs": 445.33,
+            "co2_kg": 35.1316,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 9.0,
+            "mean_temp": 25.354,
+            "mean_rh": 88.537,
+            "interventions": 6,
+            "seed": 7,
+            "note": "back-dated 2 constraint(s) by 121 min | unperturbed controller"
+          },
+          {
+            "kwh": 57.0817,
+            "cost_rs": 513.735,
+            "co2_kg": 40.528,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 110.0,
+            "mean_temp": 25.372,
+            "mean_rh": 90.438,
+            "interventions": 6,
+            "seed": 8,
+            "note": "back-dated 2 constraint(s) by 121 min | unperturbed controller"
+          },
+          {
+            "kwh": 51.0487,
+            "cost_rs": 459.438,
+            "co2_kg": 36.2445,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 9.0,
+            "mean_temp": 25.356,
+            "mean_rh": 88.522,
+            "interventions": 6,
+            "seed": 9,
+            "note": "back-dated 2 constraint(s) by 121 min | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 52.5372,
+          "cost_rs": 472.8343,
+          "co2_kg": 37.3014,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 42.6667,
+          "mean_temp": 25.3607,
+          "mean_rh": 89.1657,
+          "interventions": 6.0
+        },
+        "sd": {
+          "kwh": 4.013,
+          "cost_rs": 36.1166,
+          "co2_kg": 2.8492,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 58.3124,
+          "mean_temp": 0.0099,
+          "mean_rh": 1.1019,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.5411,
+          "cost_rs": 40.8698,
+          "co2_kg": 3.2242,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 65.9867,
+          "mean_temp": 0.0112,
+          "mean_rh": 1.2469,
+          "interventions": 0.0
+        }
+      },
+      "delta": {
+        "kwh": {
+          "baseline": 52.4798,
+          "scenario": 52.5372,
+          "abs": 0.0574,
+          "pct": 0.11,
+          "verdict": "uses 0.06 kWh more (+0.1%)"
+        },
+        "cost_rs": {
+          "baseline": 472.3187,
+          "scenario": 472.8343,
+          "abs": 0.5156,
+          "pct": 0.11,
+          "verdict": "costs 0.52 Rs more (+0.1%)"
+        },
+        "co2_kg": {
+          "baseline": 37.2607,
+          "scenario": 37.3014,
+          "abs": 0.0407,
+          "pct": 0.11,
+          "verdict": "emits 0.04 kgCO2 more (+0.1%)"
+        },
+        "viol_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "spends the same occupied-min out of band"
+        },
+        "hot_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too hot"
+        },
+        "cold_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too cold"
+        },
+        "humid_viol_min": {
+          "baseline": 1560.0,
+          "scenario": 1560.0,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "spends the same occupied-min above 65 %RH"
+        },
+        "at_capacity_min": {
+          "baseline": 51.3333,
+          "scenario": 42.6667,
+          "abs": -8.6666,
+          "pct": -16.88,
+          "verdict": "spends 8.67 occupied-min at full cooling capacity less (-16.9%)"
+        },
+        "mean_temp": {
+          "baseline": 25.3373,
+          "scenario": 25.3607,
+          "abs": 0.0234,
+          "pct": 0.09,
+          "verdict": "runs 0.02 degC mean zone temperature more (+0.1%)"
+        },
+        "mean_rh": {
+          "baseline": 89.2083,
+          "scenario": 89.1657,
+          "abs": -0.0426,
+          "pct": -0.05,
+          "verdict": "runs 0.04 %RH mean zone humidity less (-0.0%)"
+        },
+        "interventions": {
+          "baseline": 9.0,
+          "scenario": 6.0,
+          "abs": -3.0,
+          "pct": -33.33,
+          "verdict": "makes 3.00 setpoint changes less (-33.3%)"
+        }
+      }
+    },
+    "objective_energy": {
+      "label": "Objective: save energy",
+      "family": "objective",
+      "help": "Same building, but the controller is told to prioritise kilowatt-hours over comfort.",
+      "spec": {
+        "name": "Objective: save energy",
+        "kind": "objective",
+        "params": {
+          "objective": "energy"
+        },
+        "horizon_h": 6.0,
+        "seeds": [
+          7,
+          8,
+          9
+        ]
+      },
+      "headline": "Objective: save energy over 6 h x 3 seed(s): uses 6.35 kWh less (-12.1%), spends 114.33 occupied-min out of band more (baseline was zero, percent n/a).",
+      "baseline": {
+        "name": "Baseline (no change)",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "per_seed": [
+          {
+            "kwh": 49.4276,
+            "cost_rs": 444.849,
+            "co2_kg": 35.0936,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 14.0,
+            "mean_temp": 25.33,
+            "mean_rh": 88.578,
+            "interventions": 9,
+            "seed": 7,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 57.0167,
+            "cost_rs": 513.151,
+            "co2_kg": 40.4819,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 125.0,
+            "mean_temp": 25.35,
+            "mean_rh": 90.484,
+            "interventions": 9,
+            "seed": 8,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 50.9951,
+            "cost_rs": 458.956,
+            "co2_kg": 36.2065,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 15.0,
+            "mean_temp": 25.332,
+            "mean_rh": 88.563,
+            "interventions": 9,
+            "seed": 9,
+            "note": "no condition change | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "sd": {
+          "kwh": 4.0065,
+          "cost_rs": 36.0584,
+          "co2_kg": 2.8446,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 63.7992,
+          "mean_temp": 0.011,
+          "mean_rh": 1.1048,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.5338,
+          "cost_rs": 40.804,
+          "co2_kg": 3.219,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 72.1956,
+          "mean_temp": 0.0125,
+          "mean_rh": 1.2502,
+          "interventions": 0.0
+        }
+      },
+      "scenario": {
+        "name": "Objective: save energy",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 46.1283,
+          "cost_rs": 415.155,
+          "co2_kg": 32.7511,
+          "viol_min": 114.3333,
+          "hot_deg_min": 22.3457,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 15.0,
+          "mean_temp": 26.2167,
+          "mean_rh": 88.8247,
+          "interventions": 12.0
+        },
+        "per_seed": [
+          {
+            "kwh": 43.1809,
+            "cost_rs": 388.628,
+            "co2_kg": 30.6584,
+            "viol_min": 113.0,
+            "hot_deg_min": 21.991,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 14.0,
+            "mean_temp": 26.213,
+            "mean_rh": 88.63,
+            "interventions": 12,
+            "seed": 7,
+            "note": "no condition change | controller objective=energy (native)"
+          },
+          {
+            "kwh": 50.5169,
+            "cost_rs": 454.652,
+            "co2_kg": 35.867,
+            "viol_min": 116.0,
+            "hot_deg_min": 22.855,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 17.0,
+            "mean_temp": 26.222,
+            "mean_rh": 89.208,
+            "interventions": 12,
+            "seed": 8,
+            "note": "no condition change | controller objective=energy (native)"
+          },
+          {
+            "kwh": 44.6872,
+            "cost_rs": 402.185,
+            "co2_kg": 31.7279,
+            "viol_min": 114.0,
+            "hot_deg_min": 22.191,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 14.0,
+            "mean_temp": 26.215,
+            "mean_rh": 88.636,
+            "interventions": 12,
+            "seed": 9,
+            "note": "no condition change | controller objective=energy (native)"
+          }
+        ],
+        "mean": {
+          "kwh": 46.1283,
+          "cost_rs": 415.155,
+          "co2_kg": 32.7511,
+          "viol_min": 114.3333,
+          "hot_deg_min": 22.3457,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 15.0,
+          "mean_temp": 26.2167,
+          "mean_rh": 88.8247,
+          "interventions": 12.0
+        },
+        "sd": {
+          "kwh": 3.8745,
+          "cost_rs": 34.8706,
+          "co2_kg": 2.7509,
+          "viol_min": 1.5275,
+          "hot_deg_min": 0.4523,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 1.7321,
+          "mean_temp": 0.0047,
+          "mean_rh": 0.332,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.3844,
+          "cost_rs": 39.4598,
+          "co2_kg": 3.113,
+          "viol_min": 1.7286,
+          "hot_deg_min": 0.5118,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 1.96,
+          "mean_temp": 0.0053,
+          "mean_rh": 0.3757,
+          "interventions": 0.0
+        }
+      },
+      "delta": {
+        "kwh": {
+          "baseline": 52.4798,
+          "scenario": 46.1283,
+          "abs": -6.3515,
+          "pct": -12.1,
+          "verdict": "uses 6.35 kWh less (-12.1%)"
+        },
+        "cost_rs": {
+          "baseline": 472.3187,
+          "scenario": 415.155,
+          "abs": -57.1637,
+          "pct": -12.1,
+          "verdict": "costs 57.16 Rs less (-12.1%)"
+        },
+        "co2_kg": {
+          "baseline": 37.2607,
+          "scenario": 32.7511,
+          "abs": -4.5096,
+          "pct": -12.1,
+          "verdict": "emits 4.51 kgCO2 less (-12.1%)"
+        },
+        "viol_min": {
+          "baseline": 0.0,
+          "scenario": 114.3333,
+          "abs": 114.3333,
+          "pct": null,
+          "verdict": "spends 114.33 occupied-min out of band more (baseline was zero, percent n/a)"
+        },
+        "hot_deg_min": {
+          "baseline": 0.0,
+          "scenario": 22.3457,
+          "abs": 22.3457,
+          "pct": null,
+          "verdict": "accumulates 22.35 degC-min too hot more (baseline was zero, percent n/a)"
+        },
+        "cold_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too cold"
+        },
+        "humid_viol_min": {
+          "baseline": 1560.0,
+          "scenario": 1560.0,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "spends the same occupied-min above 65 %RH"
+        },
+        "at_capacity_min": {
+          "baseline": 51.3333,
+          "scenario": 15.0,
+          "abs": -36.3333,
+          "pct": -70.78,
+          "verdict": "spends 36.33 occupied-min at full cooling capacity less (-70.8%)"
+        },
+        "mean_temp": {
+          "baseline": 25.3373,
+          "scenario": 26.2167,
+          "abs": 0.8794,
+          "pct": 3.47,
+          "verdict": "runs 0.88 degC mean zone temperature more (+3.5%)"
+        },
+        "mean_rh": {
+          "baseline": 89.2083,
+          "scenario": 88.8247,
+          "abs": -0.3836,
+          "pct": -0.43,
+          "verdict": "runs 0.38 %RH mean zone humidity less (-0.4%)"
+        },
+        "interventions": {
+          "baseline": 9.0,
+          "scenario": 12.0,
+          "abs": 3.0,
+          "pct": 33.33,
+          "verdict": "makes 3.00 setpoint changes more (+33.3%)"
+        }
+      }
+    },
+    "objective_comfort": {
+      "label": "Objective: maximise comfort",
+      "family": "objective",
+      "help": "Same building, but the controller is told comfort beats energy almost every time.",
+      "spec": {
+        "name": "Objective: maximise comfort",
+        "kind": "objective",
+        "params": {
+          "objective": "comfort"
+        },
+        "horizon_h": 6.0,
+        "seeds": [
+          7,
+          8,
+          9
+        ]
+      },
+      "headline": "Objective: maximise comfort over 6 h x 3 seed(s): uses 1.95 kWh more (+3.7%), spends the same occupied-min out of band.",
+      "baseline": {
+        "name": "Baseline (no change)",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "per_seed": [
+          {
+            "kwh": 49.4276,
+            "cost_rs": 444.849,
+            "co2_kg": 35.0936,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 14.0,
+            "mean_temp": 25.33,
+            "mean_rh": 88.578,
+            "interventions": 9,
+            "seed": 7,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 57.0167,
+            "cost_rs": 513.151,
+            "co2_kg": 40.4819,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 125.0,
+            "mean_temp": 25.35,
+            "mean_rh": 90.484,
+            "interventions": 9,
+            "seed": 8,
+            "note": "no condition change | unperturbed controller"
+          },
+          {
+            "kwh": 50.9951,
+            "cost_rs": 458.956,
+            "co2_kg": 36.2065,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 15.0,
+            "mean_temp": 25.332,
+            "mean_rh": 88.563,
+            "interventions": 9,
+            "seed": 9,
+            "note": "no condition change | unperturbed controller"
+          }
+        ],
+        "mean": {
+          "kwh": 52.4798,
+          "cost_rs": 472.3187,
+          "co2_kg": 37.2607,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 51.3333,
+          "mean_temp": 25.3373,
+          "mean_rh": 89.2083,
+          "interventions": 9.0
+        },
+        "sd": {
+          "kwh": 4.0065,
+          "cost_rs": 36.0584,
+          "co2_kg": 2.8446,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 63.7992,
+          "mean_temp": 0.011,
+          "mean_rh": 1.1048,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.5338,
+          "cost_rs": 40.804,
+          "co2_kg": 3.219,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 72.1956,
+          "mean_temp": 0.0125,
+          "mean_rh": 1.2502,
+          "interventions": 0.0
+        }
+      },
+      "scenario": {
+        "name": "Objective: maximise comfort",
+        "kind": "measured",
+        "metrics": {
+          "kwh": 54.4316,
+          "cost_rs": 489.885,
+          "co2_kg": 38.6465,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 73.6667,
+          "mean_temp": 24.8073,
+          "mean_rh": 89.398,
+          "interventions": 12.0
+        },
+        "per_seed": [
+          {
+            "kwh": 51.3943,
+            "cost_rs": 462.549,
+            "co2_kg": 36.49,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 22.0,
+            "mean_temp": 24.795,
+            "mean_rh": 88.661,
+            "interventions": 12,
+            "seed": 7,
+            "note": "no condition change | controller objective=comfort (native)"
+          },
+          {
+            "kwh": 58.9343,
+            "cost_rs": 530.409,
+            "co2_kg": 41.8433,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 176.0,
+            "mean_temp": 24.831,
+            "mean_rh": 90.929,
+            "interventions": 12,
+            "seed": 8,
+            "note": "no condition change | controller objective=comfort (native)"
+          },
+          {
+            "kwh": 52.9663,
+            "cost_rs": 476.697,
+            "co2_kg": 37.6061,
+            "viol_min": 0.0,
+            "hot_deg_min": 0.0,
+            "cold_deg_min": 0.0,
+            "humid_viol_min": 1560.0,
+            "at_capacity_min": 23.0,
+            "mean_temp": 24.796,
+            "mean_rh": 88.604,
+            "interventions": 12,
+            "seed": 9,
+            "note": "no condition change | controller objective=comfort (native)"
+          }
+        ],
+        "mean": {
+          "kwh": 54.4316,
+          "cost_rs": 489.885,
+          "co2_kg": 38.6465,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 1560.0,
+          "at_capacity_min": 73.6667,
+          "mean_temp": 24.8073,
+          "mean_rh": 89.398,
+          "interventions": 12.0
+        },
+        "sd": {
+          "kwh": 3.9779,
+          "cost_rs": 35.8007,
+          "co2_kg": 2.8242,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 88.6247,
+          "mean_temp": 0.0205,
+          "mean_rh": 1.3262,
+          "interventions": 0.0
+        },
+        "ci95": {
+          "kwh": 4.5014,
+          "cost_rs": 40.5123,
+          "co2_kg": 3.1959,
+          "viol_min": 0.0,
+          "hot_deg_min": 0.0,
+          "cold_deg_min": 0.0,
+          "humid_viol_min": 0.0,
+          "at_capacity_min": 100.2883,
+          "mean_temp": 0.0232,
+          "mean_rh": 1.5007,
+          "interventions": 0.0
+        }
+      },
+      "delta": {
+        "kwh": {
+          "baseline": 52.4798,
+          "scenario": 54.4316,
+          "abs": 1.9518,
+          "pct": 3.72,
+          "verdict": "uses 1.95 kWh more (+3.7%)"
+        },
+        "cost_rs": {
+          "baseline": 472.3187,
+          "scenario": 489.885,
+          "abs": 17.5663,
+          "pct": 3.72,
+          "verdict": "costs 17.57 Rs more (+3.7%)"
+        },
+        "co2_kg": {
+          "baseline": 37.2607,
+          "scenario": 38.6465,
+          "abs": 1.3858,
+          "pct": 3.72,
+          "verdict": "emits 1.39 kgCO2 more (+3.7%)"
+        },
+        "viol_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "spends the same occupied-min out of band"
+        },
+        "hot_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too hot"
+        },
+        "cold_deg_min": {
+          "baseline": 0.0,
+          "scenario": 0.0,
+          "abs": 0.0,
+          "pct": null,
+          "verdict": "accumulates the same degC-min too cold"
+        },
+        "humid_viol_min": {
+          "baseline": 1560.0,
+          "scenario": 1560.0,
+          "abs": 0.0,
+          "pct": 0.0,
+          "verdict": "spends the same occupied-min above 65 %RH"
+        },
+        "at_capacity_min": {
+          "baseline": 51.3333,
+          "scenario": 73.6667,
+          "abs": 22.3334,
+          "pct": 43.51,
+          "verdict": "spends 22.33 occupied-min at full cooling capacity more (+43.5%)"
+        },
+        "mean_temp": {
+          "baseline": 25.3373,
+          "scenario": 24.8073,
+          "abs": -0.53,
+          "pct": -2.09,
+          "verdict": "runs 0.53 degC mean zone temperature less (-2.1%)"
+        },
+        "mean_rh": {
+          "baseline": 89.2083,
+          "scenario": 89.398,
+          "abs": 0.1897,
+          "pct": 0.21,
+          "verdict": "runs 0.19 %RH mean zone humidity more (+0.2%)"
+        },
+        "interventions": {
+          "baseline": 9.0,
+          "scenario": 12.0,
+          "abs": 3.0,
+          "pct": 33.33,
+          "verdict": "makes 3.00 setpoint changes more (+33.3%)"
+        }
+      }
+    }
+  }
+}

@@ -2,10 +2,17 @@
 
 Deterministic (seeded) so every controller comparison uses identical weather.
 Swap in real data later with fetch_openmeteo() — same interface.
+
+Outdoor humidity lives in sim.humidity (pure psychrometrics, no dependency on
+this module) and is re-exported here so callers have one weather import.
 """
 from __future__ import annotations
 
 import math
+
+from sim.humidity import outdoor_rh  # re-export: weather-facing convenience
+
+__all__ = ["outdoor_temp", "solar_factor", "outdoor_rh", "fetch_openmeteo"]
 
 
 def _day_offset(day: int, seed: int = 0) -> float:
@@ -14,8 +21,15 @@ def _day_offset(day: int, seed: int = 0) -> float:
     return (x - math.floor(x)) * 3.0 - 1.5
 
 
-def outdoor_temp(t_seconds: float, seed: int = 0) -> float:
-    """Outdoor dry-bulb temp (degC) at sim time t (seconds since sim start)."""
+def outdoor_temp(t_seconds: float, seed: int = 0, offset: float = 0.0) -> float:
+    """Outdoor dry-bulb temp (degC) at sim time t (seconds since sim start).
+
+    INPUT:  t_seconds sim seconds; seed int; offset degC added to the result
+            (heatwave / cold-snap what-if knob, default 0.0 so the existing
+            two-argument call is bit-for-bit identical).
+    OUTPUT: degC.
+    SIDE EFFECTS: none. ERROR STATES: none.
+    """
     day = int(t_seconds // 86400)
     h = (t_seconds % 86400) / 3600.0
     base = 30.0 + _day_offset(day, seed)
@@ -23,7 +37,7 @@ def outdoor_temp(t_seconds: float, seed: int = 0) -> float:
     swing = 6.0 * math.sin(math.pi * (h - 9.0) / 12.0)
     # Small smooth intra-day wobble (clouds, breeze)
     wobble = 0.6 * math.sin(h * 2.1 + day)
-    return base + swing + wobble
+    return base + swing + wobble + offset
 
 
 def solar_factor(orientation: str, h: float) -> float:
