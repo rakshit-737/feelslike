@@ -254,6 +254,7 @@ sites read `zone_id` (app.py:136, 141, 149, 155, 194) and two dashboard sites
 | `complaint_id` | str | — | **pinned, new** — links constraints created from one message |
 | `approved` | bool | — | **pinned, new** — `False` while awaiting human approval |
 | `anonymous` | bool | — | **pinned, new** — author was anonymised |
+| `cleared_t` | float\|None | sim-s | **new (D2 fix)** — set by an all-clear (`clear_zone`) or redaction (`privacy.redact_record`); `decay()` returns `0.0` when set. `created_t` is NEVER moved — it is the pattern miner's only timestamp |
 
 `ISSUE_EFFECTS` (constraints.py:16-22), °C per severity {1,2,3} and vent delta:
 
@@ -315,14 +316,14 @@ Each block below is the contract another agent codes against.
 - **OUTPUT**: `add()` returns the `explain()` dict. `active(t, zone=None)` → list.
   `zone_adjustments(t)` → the controller's offset dict. `explain(zone, t)` →
   `{zone, conflict, adjustment, summary}`. `unmet_pressure(twin, minutes)` → float (RL reward).
-- **SIDE EFFECTS**: `add` appends to `items` (unbounded). `clear_zone` **rewrites
-  `created_t` into the past** — see the caveat below.
+- **SIDE EFFECTS**: `add` appends to `items` (unbounded). `clear_zone` sets `cleared_t`
+  on the zone's active constraints; `created_t` is never modified.
 - **ERROR STATES**: an unknown `issue` yields zero offsets via `ISSUE_EFFECTS.get` default.
   A zone with no active constraints is absent from `zone_adjustments` — not present-with-zero.
-- **CAVEAT (known defect)**: `clear_zone` (constraints.py:67-76) back-dates `created_t`, which
-  corrupts the timestamp `ComfortMemory.patterns` reads (memory.py:32). A retracted complaint
-  will later be clustered at the wrong hour. A separate `cleared_t` flag is the correct fix;
-  the writer of `clone()`/`add_many` should not entrench the back-dating.
+- **INVARIANT (D2 fixed 2026-08-30)**: expiry is the `cleared_t` flag, never a move of
+  `created_t` — `ComfortMemory.patterns` (memory.py:32) clusters on `created_t`, so a
+  clock move rewrites history. Regressions: `test_constraints.py` §9 (both the
+  `clear_zone` and the `privacy.redact_record` sites).
 - **DEPENDENCIES**: none (stdlib only).
 - **TESTS**: post two opposing complaints to one zone and assert `explain()["conflict"]` is
   `True` and the weighted offset sits between the two `raw_offset`s.

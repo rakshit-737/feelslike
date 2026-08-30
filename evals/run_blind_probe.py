@@ -30,6 +30,11 @@ def main():
     args = ap.parse_args()
 
     doc = json.loads((HERE / "blind_probe.json").read_text(encoding="utf-8"))
+    if doc.get("burned"):
+        raise SystemExit(
+            "REFUSED: blind_probe.json is marked burned — its failures were studied, "
+            "so a score against it is not a generalization number. Author a fresh "
+            "probe (bump 'version', set burned: false) and archive this one.")
     cases = doc["cases"]
     n = len(cases)
 
@@ -61,7 +66,8 @@ def main():
             })
 
     mode = "rules (offline)" if args.rules else "auto (llm if key set)"
-    print(f"\nBLIND PROBE — cases the parser has never been developed against")
+    print(f"\nBLIND PROBE v{doc.get('version', '?')} "
+          f"(authored {doc.get('authored', '?')}) — cases never developed against")
     print(f"Parser mode: {mode}   Cases: {n}")
     for label, key in (("Complaint detection", "det"), ("Zone set (multi)", "zoneset"),
                        ("Issue extraction", "issue"), ("Exact triple", "triple")):
@@ -80,11 +86,13 @@ def main():
                 print(f"      got    zones={f['got']['zone_ids']} "
                       f"issue={f['got']['issue']} complaint={f['got']['is_comfort_complaint']}")
 
-    out = {"n": n, "mode": mode, "tally": tally,
+    out = {"n": n, "probe_version": doc.get("version"),
+           "probe_authored": doc.get("authored"), "mode": mode, "tally": tally,
            "pct": {k: round(100 * v / n) for k, v in tally.items()},
            "by_category": dict(by_category), "failures": failures}
-    (HERE / "results_blind.json").write_text(json.dumps(out, indent=2))
-    print(f"\nSaved -> {HERE / 'results_blind.json'}")
+    dest = HERE / ("results_blind.json" if args.rules else "results_blind_llm.json")
+    dest.write_text(json.dumps(out, indent=2))
+    print(f"\nSaved -> {dest}")
 
 
 if __name__ == "__main__":

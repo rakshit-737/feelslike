@@ -106,9 +106,12 @@ def main():
                   f"complaint:{f['got']['is_comfort_complaint']}, "
                   f"clarify:{f['got']['requires_clarification']}}}")
 
-    (HERE / "results_nlp.json").write_text(json.dumps(
+    # Per-mode output: an LLM run must never clobber the committed rules
+    # results (the docs generator reads both files by name).
+    dest = HERE / ("results_nlp.json" if args.rules else "results_nlp_llm.json")
+    dest.write_text(json.dumps(
         {"splits": splits, "total": total, "failures": failures}, indent=2))
-    print(f"\nSaved -> {HERE / 'results_nlp.json'}")
+    print(f"\nSaved -> {dest}")
 
 
 if __name__ == "__main__":

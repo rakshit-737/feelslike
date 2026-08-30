@@ -194,7 +194,13 @@ A held-out split stops being held out the moment someone debugs against it. Ours
 after a parser rewrite the held-out exact-triple score read <b>{ho_triple_pct}%</b>, which
 measures how thoroughly those specific sentences were fixed, not how well the parser
 generalizes. So we keep a second set, <span class="mono">evals/blind_probe.json</span>, that
-is never used for tuning — if a case in it ever informs a fix, that case is retired and replaced.
+is never used for tuning — and the rule has teeth: the moment a probe's failures are studied
+to inform fixes, the whole probe is marked <span class="mono">burned</span>, the runner refuses
+to score it again, and a fresh probe is authored. That fired once already — probe&nbsp;v1 is
+archived as <span class="mono">blind_probe_v1_burned.json</span> with its post-study re-score
+explicitly disowned; the numbers below are probe
+v{blind.get('probe_version', '?')}'s single-shot measurement
+({blind.get('probe_authored', 'date on file')}).
 </p>
 <table>
 <tr><th>Metric ({blind['n']} unseen cases)</th><th>Rules parser</th>{llm_th}<th>What it means</th></tr>
@@ -543,9 +549,11 @@ and messages that merely <i>mention</i> a room without complaining about it.
 <b>Primary — LLM structured extraction.</b> A system prompt carries the schema, the known
 zone list with aliases, explicit anti-hallucination rules, and worked examples (including
 Hinglish and the projector-is-broken negative). Any OpenAI-compatible provider works via
-<code>LLM_BASE_URL</code>: Anthropic Claude, OpenAI, or free tiers — Groq (Llama 3.3 70B,
-sub-second), Google AI Studio (Gemini 2.5 Flash), or a fully local Ollama model. The demo
-runs on Groq's free tier at zero cost.
+<code>LLM_BASE_URL</code>: Anthropic Claude, OpenAI, or free tiers — Groq (gpt-oss-120b,
+~2&nbsp;s), Google AI Studio (Gemini 2.5 Flash), or a fully local Ollama model. The demo
+runs on Groq's free tier at zero cost. (Provider models rotate — Groq decommissioned the
+Llama 3.3 70B this project first measured with; the parser's fallback made that a
+non-event, which is rather the point.)
 </p>
 <p>
 <b>Fallback — deterministic rules.</b> Keyword-cascade parser: most-specific issue first
@@ -705,7 +713,7 @@ against, which is what retired them as a generalization measure — see the blin
 <tr><th>Metric</th>@@NLP_HEAD@@</tr>
 @@NLP_ROWS@@
 </table>
-<p class="figcap">LLM = Llama 3.3 70B via Groq free tier through the schema-validated prompt; identical guardrails on both parsers.
+<p class="figcap">LLM = gpt-oss-120b via Groq free tier through the schema-validated prompt; identical guardrails on both parsers.
 Read these split scores as development progress, not as generalization — the section below explains why.</p>
 
 @@BLIND@@

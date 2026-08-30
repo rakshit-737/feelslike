@@ -7,10 +7,11 @@ and no Wi-Fi, and it is the only path that is deterministic enough to assert on 
 an LLM's answer is not a fixture. conftest strips the provider keys so nothing in
 this file can accidentally reach the network.
 
-Four tests are marked xfail(strict) and tagged `defect`. Each documents a real
-misparse with the precise mechanism, so the bug stays visible in every test run
-instead of being quietly absent from the suite. When one is fixed the strict
-marker turns the XPASS into a failure that names the test to un-mark.
+Tests marked "FIXED (was xfail)" document misparses that were found, kept
+visible as strict xfails with their precise mechanism, then fixed with GENERAL
+rules (never memorized strings) — they now run as plain regressions. Any test
+still carrying xfail(strict) documents a live defect; when one is fixed the
+strict marker turns the XPASS into a failure that names the test to un-mark.
 """
 from __future__ import annotations
 
@@ -198,17 +199,10 @@ def test_emoji_only_message_infers_the_issue(text, issue):
     assert out.zone_ids, "the zone was named in words and must still resolve"
 
 
-@pytest.mark.defect
-@pytest.mark.xfail(strict=True, reason=(
-    "DEFECT: prefix matching cancels the garment/appliance sarcasm lexicon. "
-    "_match_rule() accepts `tok.startswith(w)`, so the token 'sweater' matches "
-    "the too_hot word 'sweat' and 'heater' matches the too_hot word 'heat'. Both "
-    "words are ALSO the too_cold inferred signals ('sweater' in the garment list, "
-    "'space heater' in its phrase list), so every such message asserts hot and "
-    "cold at once, detect_intent()'s collision branch fires, and the issue is "
-    "downgraded to 'other' with confidence ~0.52. Result: the two lexicon entries "
-    "written specifically to catch this sarcasm can never win. 'jacket' and "
-    "'blanket' work because no too_hot word is a prefix of them."))
+# FIXED (was xfail): a token that IS a lexicon word may no longer be read as a
+# prefix/typo of another issue's word (_CLAIMED_TOKENS), and a matched phrase
+# claims its span against other issues' word matching — so "sweater" and
+# "space heater" land on the too_cold sarcasm entries written for them.
 @pytest.mark.parametrize("text", [
     "room b needs a sweater",
     "should I bring a space heater to room b",
@@ -229,18 +223,9 @@ def test_comparison_against_another_zone_still_names_both_zones():
     assert out.zone_ids == ["zone_d", "zone_e"], out.zone_ids
 
 
-@pytest.mark.defect
-@pytest.mark.xfail(strict=True, reason=(
-    "DEFECT: the English word 'than' is read as the Hinglish word 'thand' (cold). "
-    "'thand' is 5 characters so fuzzy_tolerance gives it an edit budget of 1, the "
-    "token 'than' is exactly 1 edit away, it is 4 characters so the `len(token) < 4` "
-    "guard does not apply, and 'than' is absent from FUZZ_STOPWORDS — so "
-    "fuzzy_hit('than','thand') is True. Every 'hotter than X' therefore asserts "
-    "too_hot AND too_cold, detect_intent()'s collision branch downgrades the issue "
-    "to 'other', requires_clarification goes true and confidence drops from ~0.94 "
-    "to ~0.56. Comparisons phrased the cold way ('colder than') survive only "
-    "because the false match happens to agree with the real one. Fix: add 'than' "
-    "to FUZZ_STOPWORDS."))
+# FIXED (was xfail): 'than' (and 'thank') joined FUZZ_STOPWORDS, so the English
+# function word can no longer fuzzy-match the Hinglish 'thand' and poison every
+# "hotter than X" comparison with a fake cold assertion.
 @pytest.mark.parametrize("text", [
     "the lobby is hotter than the cafeteria",
     "warmer than usual in room b",
@@ -421,18 +406,9 @@ def test_a_clear_single_zone_complaint_does_not_ask_for_clarification():
     assert p("It's way too hot in Conference Room B").requires_clarification is False
 
 
-@pytest.mark.defect
-@pytest.mark.xfail(strict=True, reason=(
-    "DEFECT: an acute distress signal with a named zone but no direction word is "
-    "dropped in SILENCE. detect_severity()'s _SEV3 table already treats "
-    "'unbearable', 'cant work', 'dying' and 'ridiculous' as level-3 evidence, but "
-    "no INTENT_TABLE rule lists them, so detect_intent() returns issue=None; "
-    "rules_parse then only sets requires_clarification when intent.ambiguous is "
-    "True (i.e. a CONTROL_VERBS request), which these are not. So "
-    "'CONFERENCE ROOM B IS UNBEARABLE' comes back is_comfort_complaint=False AND "
-    "requires_clarification=False: the operator is never told somebody is in "
-    "distress in a room the parser successfully identified. The minimal honest fix "
-    "is to flag it for clarification, not to guess a direction."))
+# FIXED (was xfail): acute distress (_SEV3) in a named zone with no direction
+# now files a comfort complaint with issue "other" (zero offset — nothing moves)
+# and requires_clarification=True, instead of being dropped in silence.
 @pytest.mark.parametrize("text", [
     "CONFERENCE ROOM B IS UNBEARABLE, I'm dying",
     "the lobby is unbearable",

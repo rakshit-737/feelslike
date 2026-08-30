@@ -519,9 +519,10 @@ def redact_record(feed: list, entry_id: str, store=None, now_t: float | None = N
       newest created_t so the expiry is never in the future).
     OUTPUT: True if a record was removed, False if the id was not found.
     SIDE EFFECTS: mutates `feed` (del by index) and, when store is passed,
-      backdates matching Constraint.created_t past EXPIRY_S. Constraint objects
-      stay in store.items — the comfort-memory miner reads that history — but
-      their decay() is zero, so they no longer influence any setpoint.
+      sets cleared_t on matching constraints (never the clock: created_t is the
+      pattern miner's only timestamp — defect D2b). Constraint objects stay in
+      store.items — the comfort-memory miner reads that history — but their
+      decay() is zero, so they no longer influence any setpoint.
     ERROR STATES: none. An unknown id, an empty feed or a store without .items
       all return False / do nothing rather than raising, because a delete
       request must never 500 on the person asking to be forgotten.
@@ -538,7 +539,7 @@ def redact_record(feed: list, entry_id: str, store=None, now_t: float | None = N
         for c in items:
             if (getattr(c, "text", None) == gone.get("text")
                     and getattr(c, "author", None) == gone.get("author")):
-                c.created_t = now_t - expiry - 1.0
+                c.cleared_t = now_t
                 c.text = "[redacted at occupant request]"
     return True
 

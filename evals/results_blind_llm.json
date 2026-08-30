@@ -1,17 +1,19 @@
 {
   "n": 20,
+  "probe_version": 2,
+  "probe_authored": "2026-08-30",
   "mode": "auto (llm if key set)",
   "tally": {
     "det": 14,
-    "zoneset": 19,
+    "zoneset": 18,
     "issue": 15,
-    "triple": 12
+    "triple": 11
   },
   "pct": {
     "det": 70,
-    "zoneset": 95,
+    "zoneset": 90,
     "issue": 75,
-    "triple": 60
+    "triple": 55
   },
   "by_category": {
     "indirect-cold": {
@@ -20,7 +22,7 @@
     },
     "sarcasm-inverted": {
       "n": 1,
-      "triple": 1
+      "triple": 0
     },
     "metaphor-humid": {
       "n": 1,
@@ -28,11 +30,11 @@
     },
     "hinglish-implied-heat": {
       "n": 1,
-      "triple": 1
+      "triple": 0
     },
     "tamil-english": {
       "n": 1,
-      "triple": 1
+      "triple": 0
     },
     "multi-zone-hinglish": {
       "n": 1,
@@ -44,11 +46,11 @@
     },
     "appliance-negative": {
       "n": 2,
-      "triple": 1
+      "triple": 2
     },
     "outdoor-negative": {
       "n": 1,
-      "triple": 1
+      "triple": 0
     },
     "retraction": {
       "n": 1,
@@ -56,7 +58,7 @@
     },
     "retraction-no-longer": {
       "n": 1,
-      "triple": 0
+      "triple": 1
     },
     "drafty": {
       "n": 1,
@@ -68,7 +70,7 @@
     },
     "multi-zone": {
       "n": 1,
-      "triple": 1
+      "triple": 0
     },
     "unknown-zone": {
       "n": 1,
@@ -76,7 +78,7 @@
     },
     "verbose-stuffy": {
       "n": 1,
-      "triple": 0
+      "triple": 1
     },
     "tamil-english-stuffy": {
       "n": 1,
@@ -84,7 +86,7 @@
     },
     "sarcasm-heat": {
       "n": 1,
-      "triple": 0
+      "triple": 1
     },
     "contrast-two-clauses": {
       "n": 1,
@@ -93,7 +95,30 @@
   },
   "failures": [
     {
-      "text": "bullpen is a legit swamp today",
+      "text": "guess the lobby thermostat is sponsored by the penguin exhibit",
+      "category": "sarcasm-inverted",
+      "gold": {
+        "is_comfort_complaint": true,
+        "zone_ids": [
+          "zone_d"
+        ],
+        "issue": "too_cold"
+      },
+      "got": {
+        "is_comfort_complaint": false,
+        "zone_ids": [
+          "zone_d"
+        ],
+        "issue": "other"
+      },
+      "missed": [
+        "det",
+        "issue"
+      ],
+      "source": "llm"
+    },
+    {
+      "text": "open office has full-on greenhouse vibes, my glasses keep fogging up",
       "category": "metaphor-humid",
       "gold": {
         "is_comfort_complaint": true,
@@ -115,41 +140,63 @@
       "source": "llm"
     },
     {
-      "text": "the microwave in the pantry is red hot",
-      "category": "appliance-negative",
+      "text": "cabin ka AC sirf naam ka hai aaj",
+      "category": "hinglish-implied-heat",
+      "gold": {
+        "is_comfort_complaint": true,
+        "zone_ids": [
+          "zone_c"
+        ],
+        "issue": "too_hot"
+      },
+      "got": {
+        "is_comfort_complaint": false,
+        "zone_ids": [
+          "zone_c"
+        ],
+        "issue": "other"
+      },
+      "missed": [
+        "det",
+        "issue"
+      ],
+      "source": "rules"
+    },
+    {
+      "text": "board room la udambu nadungudhu",
+      "category": "tamil-english",
+      "gold": {
+        "is_comfort_complaint": true,
+        "zone_ids": [
+          "zone_b"
+        ],
+        "issue": "too_cold"
+      },
+      "got": {
+        "is_comfort_complaint": false,
+        "zone_ids": [
+          "zone_b"
+        ],
+        "issue": "other"
+      },
+      "missed": [
+        "det",
+        "issue"
+      ],
+      "source": "rules"
+    },
+    {
+      "text": "chennai roads are melting out there, stay safe commuting",
+      "category": "outdoor-negative",
       "gold": {
         "is_comfort_complaint": false,
         "zone_ids": [],
         "issue": "other"
       },
       "got": {
-        "is_comfort_complaint": false,
-        "zone_ids": [
-          "zone_e"
-        ],
-        "issue": "other"
-      },
-      "missed": [
-        "zoneset"
-      ],
-      "source": "rules"
-    },
-    {
-      "text": "no longer stuffy in reception, thanks team",
-      "category": "retraction-no-longer",
-      "gold": {
-        "is_comfort_complaint": false,
-        "zone_ids": [
-          "zone_d"
-        ],
-        "issue": "other"
-      },
-      "got": {
         "is_comfort_complaint": true,
-        "zone_ids": [
-          "zone_d"
-        ],
-        "issue": "stuffy"
+        "zone_ids": [],
+        "issue": "too_hot"
       },
       "missed": [
         "det"
@@ -157,7 +204,7 @@
       "source": "rules"
     },
     {
-      "text": "could someone look at the temperature situation",
+      "text": "can facilities do something about the climate in this building",
       "category": "ambiguous-needs-clarify",
       "gold": {
         "is_comfort_complaint": true,
@@ -175,42 +222,44 @@
       "source": "rules"
     },
     {
-      "text": "conference room smells like everyone's lunch and nobody opened a window",
-      "category": "verbose-stuffy",
+      "text": "both the lobby and the conference room could double as saunas",
+      "category": "multi-zone",
       "gold": {
         "is_comfort_complaint": true,
         "zone_ids": [
+          "zone_d",
           "zone_b"
         ],
-        "issue": "stuffy"
+        "issue": "too_hot"
       },
       "got": {
-        "is_comfort_complaint": false,
+        "is_comfort_complaint": true,
         "zone_ids": [
-          "zone_b"
+          "zone_d",
+          "zone_b",
+          "zone_c"
         ],
-        "issue": "other"
+        "issue": "too_hot"
       },
       "missed": [
-        "det",
-        "issue"
+        "zoneset"
       ],
       "source": "rules"
     },
     {
-      "text": "canteen la kaathu illa, mudiyala",
+      "text": "open office la moochu vida mudiyala, konjam kaathu vidunga",
       "category": "tamil-english-stuffy",
       "gold": {
         "is_comfort_complaint": true,
         "zone_ids": [
-          "zone_e"
+          "zone_a"
         ],
         "issue": "stuffy"
       },
       "got": {
         "is_comfort_complaint": false,
         "zone_ids": [
-          "zone_e"
+          "zone_a"
         ],
         "issue": "other"
       },
@@ -221,48 +270,25 @@
       "source": "rules"
     },
     {
-      "text": "is the AC even on in the lobby or is that decorative",
-      "category": "sarcasm-heat",
-      "gold": {
-        "is_comfort_complaint": true,
-        "zone_ids": [
-          "zone_d"
-        ],
-        "issue": "too_hot"
-      },
-      "got": {
-        "is_comfort_complaint": false,
-        "zone_ids": [
-          "zone_d"
-        ],
-        "issue": "other"
-      },
-      "missed": [
-        "det",
-        "issue"
-      ],
-      "source": "rules"
-    },
-    {
-      "text": "printer room is fine but the open office is unbearable",
+      "text": "the cafeteria is comfy now but the reception is still an oven",
       "category": "contrast-two-clauses",
       "gold": {
         "is_comfort_complaint": true,
         "zone_ids": [
-          "zone_a"
+          "zone_d"
         ],
         "issue": "too_hot"
       },
       "got": {
-        "is_comfort_complaint": false,
+        "is_comfort_complaint": true,
         "zone_ids": [
-          "zone_a"
+          "zone_e",
+          "zone_d"
         ],
-        "issue": "other"
+        "issue": "too_hot"
       },
       "missed": [
-        "det",
-        "issue"
+        "zoneset"
       ],
       "source": "rules"
     }

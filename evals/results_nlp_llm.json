@@ -5,167 +5,100 @@
       "det": 30,
       "zone": 30,
       "issue": 30,
+      "zoneset": 30,
+      "clarify": 30,
       "triple": 30
     },
     "heldout": {
       "n": 20,
-      "det": 15,
-      "zone": 17,
-      "issue": 16,
-      "triple": 12
+      "det": 20,
+      "zone": 20,
+      "issue": 20,
+      "zoneset": 20,
+      "clarify": 20,
+      "triple": 20
+    },
+    "heldout2": {
+      "n": 20,
+      "det": 20,
+      "zone": 18,
+      "issue": 20,
+      "zoneset": 18,
+      "clarify": 18,
+      "triple": 18
     }
   },
   "total": {
-    "n": 50,
-    "det": 45,
-    "zone": 47,
-    "issue": 46,
-    "triple": 42
+    "n": 70,
+    "det": 70,
+    "zone": 68,
+    "issue": 70,
+    "zoneset": 68,
+    "clarify": 68,
+    "triple": 68
   },
   "failures": [
     {
-      "text": "love how I need gloves to type in the open office",
-      "split": "heldout",
+      "text": "cafteria is soo warm today",
+      "split": "heldout2",
       "gold": {
         "is_comfort_complaint": true,
-        "zone_id": "zone_a",
-        "issue": "too_cold"
+        "zone_id": "zone_e",
+        "zone_ids": [
+          "zone_e"
+        ],
+        "issue": "too_hot"
       },
       "got": {
-        "is_comfort_complaint": false,
-        "zone_id": "zone_a",
-        "issue": "other",
-        "severity": 1,
-        "confidence": 0.6,
-        "reasoning": "Rules: no comfort keyword matched."
-      },
-      "source": "rules"
-    },
-    {
-      "text": "AC full blast in cabin, hawa seedha muh pe lag rahi hai",
-      "split": "heldout",
-      "gold": {
         "is_comfort_complaint": true,
-        "zone_id": "zone_c",
-        "issue": "drafty"
-      },
-      "got": {
-        "is_comfort_complaint": false,
-        "zone_id": "zone_c",
-        "issue": "other",
+        "zone_id": null,
+        "issue": "too_hot",
         "severity": 1,
-        "confidence": 0.6,
-        "reasoning": "Rules: no comfort keyword matched."
+        "confidence": 0.85,
+        "reasoning": "Mild warm complaint, but zone not recognized.",
+        "zone_ids": [],
+        "zone_confidence": {},
+        "requires_clarification": true,
+        "language": "en",
+        "normalized_text": "cafteria is soo warm today"
       },
-      "source": "rules"
+      "source": "llm",
+      "missed": [
+        "zone",
+        "zoneset",
+        "clarify"
+      ]
     },
     {
-      "text": "both the lobby and the cafeteria are boiling today",
-      "split": "heldout",
+      "text": "recepshun is an ice box agian",
+      "split": "heldout2",
       "gold": {
         "is_comfort_complaint": true,
         "zone_id": "zone_d",
-        "issue": "too_hot"
+        "zone_ids": [
+          "zone_d"
+        ],
+        "issue": "too_cold"
       },
       "got": {
         "is_comfort_complaint": true,
         "zone_id": null,
-        "issue": "too_hot",
-        "severity": 2,
-        "confidence": 0.92,
-        "reasoning": "Multiple zones mentioned with a clear heat complaint."
-      },
-      "source": "llm"
-    },
-    {
-      "text": "to hot in the caben",
-      "split": "heldout",
-      "gold": {
-        "is_comfort_complaint": true,
-        "zone_id": "zone_c",
-        "issue": "too_hot"
-      },
-      "got": {
-        "is_comfort_complaint": true,
-        "zone_id": null,
-        "issue": "too_hot",
+        "issue": "too_cold",
         "severity": 1,
-        "confidence": 0.55,
-        "reasoning": "Rules-based keyword match."
+        "confidence": 0.62,
+        "reasoning": "Rules[explicit]: matched ice box.",
+        "zone_ids": [],
+        "zone_confidence": {},
+        "requires_clarification": true,
+        "language": "en",
+        "normalized_text": "recepshun is an ice box agian"
       },
-      "source": "rules"
-    },
-    {
-      "text": "the coffee machine is steaming hot again",
-      "split": "heldout",
-      "gold": {
-        "is_comfort_complaint": false,
-        "zone_id": null,
-        "issue": "other"
-      },
-      "got": {
-        "is_comfort_complaint": false,
-        "zone_id": "zone_e",
-        "issue": "other",
-        "severity": 1,
-        "confidence": 0.8,
-        "reasoning": "Equipment issue, not thermal comfort, possibly near Cafeteria E."
-      },
-      "source": "llm"
-    },
-    {
-      "text": "open office AC ki hawa direct desk pe aa rahi hai",
-      "split": "heldout",
-      "gold": {
-        "is_comfort_complaint": true,
-        "zone_id": "zone_a",
-        "issue": "drafty"
-      },
-      "got": {
-        "is_comfort_complaint": false,
-        "zone_id": "zone_a",
-        "issue": "other",
-        "severity": 1,
-        "confidence": 0.6,
-        "reasoning": "Rules: no comfort keyword matched."
-      },
-      "source": "rules"
-    },
-    {
-      "text": "canteen me dum ghut raha hai",
-      "split": "heldout",
-      "gold": {
-        "is_comfort_complaint": true,
-        "zone_id": "zone_e",
-        "issue": "stuffy"
-      },
-      "got": {
-        "is_comfort_complaint": false,
-        "zone_id": "zone_e",
-        "issue": "other",
-        "severity": 1,
-        "confidence": 0.6,
-        "reasoning": "Rules: no comfort keyword matched."
-      },
-      "source": "rules"
-    },
-    {
-      "text": "did you see how hot it is outside today? 40 degrees",
-      "split": "heldout",
-      "gold": {
-        "is_comfort_complaint": false,
-        "zone_id": null,
-        "issue": "other"
-      },
-      "got": {
-        "is_comfort_complaint": true,
-        "zone_id": null,
-        "issue": "too_hot",
-        "severity": 1,
-        "confidence": 0.55,
-        "reasoning": "Rules-based keyword match."
-      },
-      "source": "rules"
+      "source": "rules",
+      "missed": [
+        "zone",
+        "zoneset",
+        "clarify"
+      ]
     }
   ]
 }

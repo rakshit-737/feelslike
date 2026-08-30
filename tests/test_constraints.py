@@ -6,10 +6,9 @@ true, so the numbers are asserted exactly rather than approximately wherever the
 formula is closed-form (weight = severity x confidence x decay, half-life 45 min,
 expiry 2 h).
 
-Two tests are xfail(strict) and tagged `defect`: both are the SAME root cause —
-expiring a constraint by back-dating created_t, when created_t is also the only
-timestamp ComfortMemory.patterns() has to cluster on. They are kept as failing
-tests so the corruption stays visible in every run.
+Section 9 holds the regressions for the fixed back-dating family (defects D2 /
+D2b): expiry is now the cleared_t flag, never a move of created_t — the only
+timestamp ComfortMemory.patterns() has to cluster on.
 """
 from __future__ import annotations
 
@@ -431,24 +430,16 @@ def test_view_shape_matches_the_pinned_constraint_view(store):
 
 
 # --------------------------------------------------------------------------
-# 9 · KNOWN DEFECTS — the back-dating family
+# 9 · the back-dating family (FIXED: cleared_t flag) — regressions
 # --------------------------------------------------------------------------
+# Both tests below used to be xfail(strict) documenting defects D2 / D2b:
+# clear_zone() and privacy.redact_record() expired a constraint by MOVING ITS
+# CLOCK (created_t = now - EXPIRY_S - 1), and created_t is the only timestamp
+# ComfortMemory.patterns() has to cluster on — so every all-clear or redaction
+# silently rewrote history and could destroy a learned pattern. The fix is the
+# Constraint.cleared_t flag, honoured by decay(); created_t is never touched.
+# These stay as regressions so the clock-move can never come back.
 
-@pytest.mark.defect
-@pytest.mark.xfail(strict=True, reason=(
-    "DEFECT D2: ConstraintStore.clear_zone() expires a constraint by MOVING ITS "
-    "CLOCK — `c.created_t = now_t - EXPIRY_S - 1.0` — and created_t is the only "
-    "timestamp ComfortMemory.patterns() has to cluster on (it derives both the day "
-    "index and the hour-of-day from it). So every all-clear silently rewrites "
-    "history: a complaint filed at 14:00 on Tuesday and retracted at 14:30 is "
-    "recorded as having happened at 12:30, and one filed just after midnight moves "
-    "to the PREVIOUS DAY. This test files the same complaint at 14:00 on two "
-    "distinct days, so patterns() legitimately learns a 2-day 14:00 habit, then "
-    "issues one all-clear: the surviving event moves to 12:30, falls outside "
-    "TOLERANCE_H (1.0 h) of the cluster, splits into two 1-day clusters and the "
-    "learned pattern DISAPPEARS. Fix: a separate `cleared` flag that decay() "
-    "honours, so expiry never touches the clock. A multi-zone all-clear back-dates "
-    "several constraints at once, so the damage per retraction is now wider."))
 def test_clear_zone_must_not_corrupt_the_comfort_memory_timeline(store):
     from backend.memory import ComfortMemory
     day0_1400 = 14 * 3600.0
@@ -469,16 +460,6 @@ def test_clear_zone_must_not_corrupt_the_comfort_memory_timeline(store):
         f"{[(int(c.created_t // 86400), round((c.created_t % 86400) / 3600, 2)) for c in store.items]}")
 
 
-@pytest.mark.defect
-@pytest.mark.xfail(strict=True, reason=(
-    "DEFECT D2b, same root cause in a second owner's file: "
-    "backend.privacy.redact_record() also expires constraints by back-dating "
-    "created_t (`c.created_t = now_t - expiry - 1.0`), and it does so for EVERY "
-    "constraint matching the deleted record's text+author regardless of age — so a "
-    "single forget-me request can rewrite the timestamps of a whole week of that "
-    "occupant's history and collapse the pattern miner's clusters. The deletion "
-    "itself is correct and must keep working; only the mechanism for expiring the "
-    "derived constraints needs to become a flag rather than a clock move."))
 def test_redact_record_must_not_corrupt_the_comfort_memory_timeline(store):
     from backend.memory import ComfortMemory
     from backend.privacy import record_id, redact_record

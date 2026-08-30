@@ -36,6 +36,7 @@ CADENCES (sim time, not wall clock):
 """
 from __future__ import annotations
 
+import csv
 import json
 import threading
 import time
@@ -48,12 +49,14 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 
-from backend import parser, privacy, whatif
+from backend import parser, privacy, tariff, whatif
 from backend.analytics import AnalyticsStore
 from backend.constraints import ConstraintStore
 from backend.contracts import OBJECTIVES, SAFETY_MODES, to_dict
 from backend.decisions import DecisionLog
 from backend.demo import DemoRunner
+from backend.hardware import (HW_ZONE, READING_LOG_MAX, HardwareBridge,
+                              HttpHVACAdapter, HttpSensorAdapter)
 from backend.maintenance import MaintenanceMonitor
 from backend.memory import ComfortMemory
 from backend.privacy import AIDisclosure
@@ -67,6 +70,9 @@ DASHBOARD_DIR = ROOT / "dashboard"
 DASHBOARD = DASHBOARD_DIR / "index.html"
 OCCUPANT = DASHBOARD_DIR / "occupant.html"
 EXPERIMENTS_FILE = ROOT / "evals" / "results_whatif.json"
+RL_PROGRESS_FILE = ROOT / "rl" / "models" / "progress.csv"
+ENERGY_RESULTS_FILE = ROOT / "evals" / "results_energy.json"
+RL_CURVE_MAX_POINTS = 240    # the panel's chart budget; the csv holds ~500 rows
 DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 FEED_MAX = 30                # occupant channel depth the dashboard renders
@@ -107,6 +113,12 @@ class LiveSim:
         self.privacy_cfg = privacy.DEFAULTS
         self.errors: dict = {}                  # subsystem -> first failure + count
         self.steps = 0                          # physics steps since process start
+        # Hardware bridge + the REAL adapters (backend.hardware). Deliberately
+        # NOT rebuilt by _build(): the rig is physical state, not sim state — a
+        # simulation reset must not zero a fan that is really spinning.
+        self.hw_bridge = HardwareBridge()
+        self.hw_sensor = HttpSensorAdapter(self.hw_bridge)
+        self.hw_hvac = HttpHVACAdapter(self.hw_bridge)
         self._build()
         threading.Thread(target=self._loop, daemon=True).start()
 
@@ -194,6 +206,7 @@ class LiveSim:
 
         self._safe("decisions", self._tick_decisions)
         self._safe("memory", self._tick_memory)
+        self._safe("hardware", self._tick_hardware)
         if self.us.t >= self._next_maint:
             self._next_maint = self.us.t + MAINT_INTERVAL_S
             self._safe("maintenance", self._tick_maintenance)
@@ -228,6 +241,15 @@ class LiveSim:
     def _tick_memory(self) -> None:
         for note in self.memory.tick(self.us, self.store):
             self.add_feed(note)
+
+    def _tick_hardware(self) -> None:
+        """Mirror HW_ZONE's commanded vent onto the physical rig, through the
+        adapter seam (HttpHVACAdapter.write_vent -> bridge -> node poll reply).
+        Same controller, same command, no special case in the control law.
+        Inert until a node has POSTed at least once, so an all-sim session
+        leaves zero hardware footprints."""
+        if self.hw_bridge.has_node():
+            self.hw_hvac.write_vent(HW_ZONE, int(self.last_vents.get(HW_ZONE, 0) or 0))
 
     def _tick_maintenance(self) -> None:
         self.monitor.tick(self.us, self.store, self.ctrl_us.last_decisions)
@@ -425,11 +447,20 @@ class LiveSim:
             entry["author_anonymous"] = shown != str(author)
         zone_ids = list(parsed.zone_ids or ([parsed.zone_id] if parsed.zone_id else []))
 
+        # RESPONSE SHAPE: `action` is the machine-readable code the docstring
+        # promises (applied/cleared/ignored/clarify/noted) — placed AFTER the
+        # ** expansion so the feed entry's human sentence cannot shadow it.
+        # That sentence still reaches the client as `action_text`; the FEED
+        # entry keeps `action` long-form because the dashboard badge reads it.
+        def respond(code: str, **extra) -> dict:
+            return {"ok": True, **entry, "action_text": entry["action"],
+                    "action": code, **extra}
+
         if parser.detect_retraction(clean):
             if not zone_ids:
                 entry["action"] = "noted — glad it's better (no zone named, nothing cleared)"
                 self.add_feed(entry)
-                return {"ok": True, "action": "noted", **entry}
+                return respond("noted")
             with self.lock:
                 per_zone = {z: self.store.clear_zone(z, self.us.t) for z in zone_ids}
             n = sum(per_zone.values())
@@ -438,18 +469,18 @@ class LiveSim:
             entry["zones"] = zone_ids
             entry["cleared_by_zone"] = per_zone
             self.add_feed(entry)
-            return {"ok": True, "action": "cleared", "cleared": n, **entry}
+            return respond("cleared", cleared=n)
 
         if not parsed.is_comfort_complaint:
             entry["action"] = "ignored — not a comfort complaint"
             self.add_feed(entry)
-            return {"ok": True, "action": "ignored", **entry}
+            return respond("ignored")
 
         if not zone_ids:
             entry["action"] = ("clarify — which zone? (" +
                                ", ".join(z.name for z in ZONES) + ")")
             self.add_feed(entry)
-            return {"ok": True, "action": "clarify", **entry}
+            return respond("clarify")
 
         with self.lock:
             created = self.store.add_many(zone_ids, parsed.issue, parsed.severity,
@@ -471,7 +502,7 @@ class LiveSim:
         entry["explanations"] = explanations
         entry["explanation"] = explanations[0]   # back-compat: dashboard reads this
         self.add_feed(entry)
-        return {"ok": True, "action": "applied", **entry}
+        return respond("applied")
 
     # ------------------------------------------------------------- what-if
     def run_whatif(self, scenario: str, horizon_h: float | None = None,
@@ -543,6 +574,7 @@ class LiveSim:
             adj = adjustments.get(z.id)
             snap = self.us.zone_snapshot(z.id)
             cap = max(1e-6, snap["capacity_w"])
+            acts = self.store.active(self.us.t, z.id)
             rows.append({
                 # --- legacy keys: name and meaning frozen ---------------------
                 "id": z.id, "name": z.name,
@@ -552,7 +584,7 @@ class LiveSim:
                 "vent": self.last_vents.get(z.id, 0),
                 "occ": int(self.us.occupancy_now(z.id)),
                 "offset": adj["setpoint_offset"] if adj else 0.0,
-                "active_constraints": len(self.store.active(self.us.t, z.id)),
+                "active_constraints": len(acts),
                 # --- additive -------------------------------------------------
                 "rh": snap["rh_pct"],
                 "dew_point_c": snap["dew_point_c"],
@@ -564,7 +596,12 @@ class LiveSim:
                 "at_capacity": snap["at_capacity"],
                 "locked_out": bool(lockout and z.id in self.ctrl_us.locked_zones),
                 "conflict": bool(adj["conflict"]) if adj else False,
-                "pending_constraints": int(adj["pending"]) if adj else 0,
+                # Counted directly, NOT from zone_adjustments: that dict omits a
+                # zone whose constraints are ALL pending ("exactly as if nothing
+                # had been filed"), which is precisely when an operator most
+                # needs to see the count (was a strict-xfail defect).
+                "pending_constraints": sum(1 for c in acts
+                                           if not c.approved and not c.rejected),
                 "alerts": alerts_by_zone.get(z.id, []),
             })
         return rows
@@ -604,7 +641,11 @@ class LiveSim:
                            "saved_kwh": round(saved_kwh, 2),
                            "saved_pct": round(pct, 1),
                            "saved_rs": round(saved_kwh * TARIFF, 1),
-                           "saved_co2": round(saved_kwh * GRID_CO2, 2)},
+                           "saved_co2": round(saved_kwh * GRID_CO2, 2),
+                           # additive: the SAME measured kWh repriced at the
+                           # verified TANGEDCO ToD tariff — display only, the
+                           # flat-tariff figures above are untouched (§8.11)
+                           "tou": tariff.summary(self.history, self.us.hour)},
                 "history": list(self.history),          # copy: the loop appends
                 "feed": feed,                           # copies: the loop rebinds
                 # --- additive top-level ------------------------------------
@@ -613,6 +654,7 @@ class LiveSim:
                 "decisions": self.decisions.recent(DECISIONS_IN_STATE),
                 "analytics": {"summary": self.analytics.summary(feed, alerts)},
                 "privacy": self.privacy_state(),
+                "hardware": self.hw_bridge.status(),
                 "constraint_stats": self.store.stats(self.us.t),
                 "health": {"errors": [dict(v) for v in self.errors.values()],
                            "steps": self.steps,
@@ -679,6 +721,23 @@ class RedactIn(BaseModel):
 class DemoIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     action: str = "next"
+
+
+class HwReadingIn(BaseModel):
+    # extra="allow", unlike every other new body: firmware in the field may grow
+    # fields (battery_v, rssi) without a lockstep server deploy. The bridge
+    # validates the fields it actually uses and ignores the rest.
+    model_config = ConfigDict(extra="allow")
+    node_id: str
+    temp_c: float
+    rh_pct: float | None = None
+    seq: int = 0
+    uptime_s: float = 0.0
+
+
+class HwHeaterIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    on: bool
 
 
 # ==========================================================================
@@ -766,14 +825,14 @@ async def slack_command(request: Request):
     zones = r.get("zones") or ([p["zone_id"]] if p.get("zone_id") else [])
     zone = ", ".join(ZONE_NAMES.get(z, z) for z in zones) or "—"
     badge = f"[{r['source']} · {r['latency_ms']} ms]"
-    action = r["action"]  # long form, e.g. "all-clear — 2 constraint(s) cleared..."
+    action = r["action"]  # machine-readable code: applied/cleared/clarify/ignored/noted
     if action == "applied":
         reply = (f":thermometer: Got it — *{p['issue'].replace('_', ' ')}* in "
                  f"*{zone}* (severity {p['severity']}). "
                  f"{r['explanation']['summary']} {badge}")
-    elif action.startswith("all-clear"):
+    elif action == "cleared":
         reply = f":white_check_mark: All clear for *{zone}* — {r['cleared']} constraint(s) lifted. {badge}"
-    elif action.startswith("clarify"):
+    elif action == "clarify":
         reply = (":grey_question: Which zone? I know: "
                  + ", ".join(ZONE_NAMES.values()) + f". {badge}")
     else:  # ignored / noted
@@ -1122,6 +1181,134 @@ def get_experiments():
     out = dict(data)
     out["available"] = True
     out["path"] = str(EXPERIMENTS_FILE)
+    return out
+
+
+# ==========================================================================
+# hardware-in-the-loop (the shoebox rig; see backend/hardware.py)
+# ==========================================================================
+
+@app.post("/api/hw/reading")
+def hw_reading(body: HwReadingIn):
+    """The ESP32 node's poll: one reading in, the actuator commands back.
+
+    INPUT: {"node_id": str, "temp_c": float, "rh_pct": float|null, "seq": int,
+      "uptime_s": float} — extra fields are accepted and ignored.
+    OUTPUT: {"ok": true, "fan": 0|1|2, "heater": bool, "watchdog_s", "poll_s"}.
+      Field names are FROZEN — the firmware parses them by name.
+    SIDE EFFECTS: stores the reading (bounded log), marks the node live; the
+      fan command it returns is whatever the controller last wrote for HW_ZONE
+      through HttpHVACAdapter.
+    ERROR STATES: 422 for a missing/implausible field (temp outside -20..70,
+      RH outside 0..100), naming the field.
+    """
+    try:
+        return sim.hw_bridge.post_reading(body.model_dump())
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from e
+
+
+@app.get("/api/hw/status")
+def hw_status():
+    """Everything about the rig: bridge state, inferred sensor health, honest
+    HVAC capabilities, recent command audit.
+
+    INPUT: none. OUTPUT: the bridge status() block plus sensor_health (the
+      SensorAdapter's INFERRED verdict — no_data / stale / stuck / out_of_range),
+      hvac_capabilities (vent-only, and says so) and recent_writes.
+      connected=false with null reading when no node has ever posted.
+    SIDE EFFECTS: none. ERROR STATES: none.
+    """
+    st = sim.hw_bridge.status()
+    st["sensor_health"] = sim.hw_sensor.health(HW_ZONE)
+    st["hvac_capabilities"] = sim.hw_hvac.capabilities()
+    st["recent_writes"] = list(sim.hw_bridge.writes[-20:])
+    return st
+
+
+@app.post("/api/hw/heater")
+def hw_heater(body: HwHeaterIn):
+    """Manual calibration heater. NOT a controller output — the heater is the
+    step-input for sim-to-real calibration, driven by a human only.
+
+    INPUT: {"on": bool}.
+    OUTPUT: {"ok": true, "requested", "heater", "duty_limited", "duty"} —
+      heater is what the duty envelope actually allows (max 50% of any
+      10-minute window); duty_limited=true means the cap is holding it off.
+    SIDE EFFECTS: changes the command the node receives on its next poll.
+    ERROR STATES: 422 for a malformed body.
+    """
+    return {"ok": True, **sim.hw_bridge.set_heater(body.on)}
+
+
+@app.get("/api/hw/log")
+def hw_log(limit: int = 4096):
+    """The reading log, oldest first — the calibration script's input.
+
+    INPUT: ?limit=1..8192 (default 4096).
+    OUTPUT: {"zone", "rows": [{node_id, temp_c, rh_pct, seq, uptime_s, t_wall}],
+      "count"}. Empty rows when no node has posted.
+    SIDE EFFECTS: none. ERROR STATES: 400 for a limit outside 1..8192.
+    """
+    if not 1 <= limit <= READING_LOG_MAX:
+        raise HTTPException(400, f"limit must be between 1 and {READING_LOG_MAX}")
+    rows = sim.hw_bridge.log_rows(limit)
+    return {"zone": HW_ZONE, "rows": rows, "count": len(rows)}
+
+
+# ==========================================================================
+# RL trajectory (file-backed, like /api/experiments: committed artifacts only)
+# ==========================================================================
+
+@app.get("/api/rl")
+def get_rl():
+    """The PPO training trajectory and the measured ablation it lost on.
+
+    INPUT: none. Reads rl/models/progress.csv (SB3 logger output — written by
+      `python -m rl.train`, NEVER by this process) and evals/results_energy.json
+      (written by scripts.demo_day). What a judge sees is what was committed.
+    OUTPUT: {"available", "points": [{steps, ep_rew_mean}] thinned to <= 240,
+      "final": the last point, "table": the four measured controller rows,
+      "decision": the M4 sentence, "note"}. Missing/corrupt files degrade to
+      available=false with the reason in "note" — an empty-but-valid payload,
+      never a 500.
+    SIDE EFFECTS: none. ERROR STATES: none by design.
+    """
+    out: dict = {
+        "available": False, "points": [], "final": None, "table": [],
+        "decision": ("M4 decision: the demo ships ConstraintAware. PPO saves more "
+                     "energy (512.7 kWh, -29.0%) but books 22 violation-minutes; "
+                     "the shipped controller holds 530.3 kWh (-26.6%) at ZERO. "
+                     "Zero-violations is the thesis, so RL is shown as trajectory."),
+        "note": "",
+    }
+    try:
+        with RL_PROGRESS_FILE.open(newline="", encoding="utf-8") as f:
+            rows = [(float(r["time/total_timesteps"]), float(r["rollout/ep_rew_mean"]))
+                    for r in csv.DictReader(f)
+                    if r.get("time/total_timesteps") and r.get("rollout/ep_rew_mean")]
+    except (OSError, ValueError, KeyError) as e:
+        out["note"] = (f"rl/models/progress.csv unavailable ({type(e).__name__}: {e}); "
+                       f"run `python -m rl.train` to produce it.")
+        return out
+    if not rows:
+        out["note"] = "progress.csv holds no reward rows yet."
+        return out
+    rows.sort(key=lambda p: p[0])
+    step = max(1, -(-len(rows) // RL_CURVE_MAX_POINTS))   # ceil: honor the budget
+    thinned = rows[::step]
+    if thinned[-1] != rows[-1]:
+        thinned.append(rows[-1])
+    out["points"] = [{"steps": int(s), "ep_rew_mean": round(v, 3)} for s, v in thinned]
+    out["final"] = out["points"][-1]
+    out["available"] = True
+    try:
+        data = json.loads(ENERGY_RESULTS_FILE.read_text(encoding="utf-8"))
+        out["table"] = [{"name": k, "kwh": v.get("kwh"), "viol_min": v.get("viol_min"),
+                         "saved_pct": v.get("saved_pct_vs_baseline")}
+                        for k, v in (data.get("results") or {}).items()]
+    except (OSError, ValueError) as e:
+        out["note"] = f"results_energy.json unavailable ({type(e).__name__}) — run scripts.demo_day."
     return out
 
 

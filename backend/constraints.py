@@ -66,6 +66,12 @@ class Constraint:
     rejected: bool = False    # operator said no. Distinguishes "denied" from
                               # "still waiting" — both have approved == False,
                               # but only the waiting ones are pending_approvals().
+    cleared_t: float | None = None
+                              # sim-time an all-clear / redaction expired this
+                              # constraint. Expiry is this FLAG, never a clock
+                              # move: created_t stays honest because it is the
+                              # only timestamp ComfortMemory.patterns() has to
+                              # cluster on (defect D2/D2b).
 
     @classmethod
     def from_issue(cls, zone, issue, severity, confidence, now_t, text="", author="anonymous",
@@ -82,7 +88,9 @@ class Constraint:
         return max(0.0, now_t - self.created_t) / 60.0
 
     def expires_in_min(self, now_t: float) -> float:
-        """Sim-minutes of life left before EXPIRY_S; 0.0 once expired."""
+        """Sim-minutes of life left before EXPIRY_S; 0.0 once expired or cleared."""
+        if self.cleared_t is not None:
+            return 0.0
         return max(0.0, (EXPIRY_S - max(0.0, now_t - self.created_t)) / 60.0)
 
     def counts(self) -> bool:
@@ -114,6 +122,8 @@ class Constraint:
         ))
 
     def decay(self, now_t: float) -> float:
+        if self.cleared_t is not None:
+            return 0.0
         age = max(0.0, now_t - self.created_t)
         return 0.0 if age > EXPIRY_S else 0.5 ** (age / HALF_LIFE_S)
 
@@ -310,11 +320,13 @@ class ConstraintStore:
     def clear_zone(self, zone: str, now_t: float) -> int:
         """All-clear from an occupant: expire the zone's active constraints now.
         Items stay in history (comfort-memory mines them) but stop influencing
-        control. Returns how many were cleared."""
+        control. Expiry sets cleared_t — created_t is NEVER touched, so the
+        pattern miner's timeline survives the retraction (defect D2 fix).
+        Returns how many were cleared."""
         cleared = 0
         for c in self.items:
             if c.zone == zone and c.decay(now_t) > 0.02:
-                c.created_t = now_t - EXPIRY_S - 1.0
+                c.cleared_t = now_t
                 cleared += 1
         return cleared
 

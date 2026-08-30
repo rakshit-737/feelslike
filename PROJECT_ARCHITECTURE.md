@@ -283,20 +283,17 @@ worth changing now, but it is why `backend/contracts.py` imports nothing at all.
 
 ### Real defects worth knowing before extending
 
-1. **Feed / history handed out under a lock, serialised outside it.** `state()` returns
-   `self.history` and `self.feed` *by reference* (app.py:104-105). The sim thread then
-   calls `history.append(...)` (app.py:61) while FastAPI's JSON encoder may be walking that
-   same list, and `add_feed` rebinds `self.feed` (app.py:69). At 1 Hz polling this is rare,
-   but it is a genuine `RuntimeError: list changed size during iteration` risk on stage.
-   Fix is one word: return shallow copies.
+1. **FIXED — feed / history race.** `state()` now builds the whole payload inside the
+   lock and hands out copies only (`list(self.history)`, `[dict(e) for e in self.feed]`).
+   Regression: `test_api.py::test_polling_state_while_the_sim_steps_never_tears_a_response`.
 2. **`ConstraintStore.items` never shrinks.** `active()` filters by decay (constraints.py:63)
    but nothing prunes; `zone_adjustments` and `ComfortMemory.patterns` both walk the full
    list every simulated minute. At 960× over a long session this becomes O(n) work per
    step with n growing all session.
-3. **`clear_zone` rewrites `created_t` into the past** (constraints.py:74) to expire a
-   constraint. That mutation corrupts the constraint's own history: `ComfortMemory.patterns`
-   later reads `created_t` (memory.py:32) and will cluster the retracted complaint at the
-   *wrong hour of the wrong day*. A separate `cleared_t` / `active` flag is the correct fix.
+3. **FIXED (2026-08-30) — `clear_zone` back-dating.** Expiry is now the
+   `Constraint.cleared_t` flag, honoured by `decay()`; `created_t` is never moved. The
+   same fix landed in the second site, `privacy.redact_record()`. Regressions:
+   `test_constraints.py` §9.
 4. **`POST /api/speed` does not validate types.** `float(body.get("speed", 240))` raises on
    a non-numeric body → 500.
 5. **`parse()` breaks out of the provider loop on the first failure** (parser.py:174), so if

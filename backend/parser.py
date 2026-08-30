@@ -170,7 +170,7 @@ night nothing office others outside people person phone please printer problem
 projector really reception right room rooms saturday screen second seems
 sending service should since small something someone speaker started sticky
 sunday swamped system
-table taking thanks their there thermostat these thing things think third those
+table taking than thank thanks their there thermostat these thing things think third those
 three through thursday today together tomorrow tonight trying tuesday under until
 using visitor visitors waiting wanted watch water wearing wednesday weather
 weekend where which while window windows without working would writing wrong
@@ -579,6 +579,16 @@ INTENT_TABLE: tuple = (
                       "soodu", "sudu", "scorching", "sizzling")),
 )
 
+# Every full lexicon word, mapped to the issue(s) that own it. A token that IS
+# a lexicon word belongs to its own entry: it may never be read as a prefix or
+# typo of ANOTHER issue's word. Without this, "sweater" (a too_cold garment
+# signal) prefix-matches the too_hot word "sweat", the collision branch fires,
+# and the sarcasm lexicon written for exactly that message can never win.
+_CLAIMED_TOKENS: dict = {}
+for _r in INTENT_TABLE:
+    for _w in _r.words:
+        _CLAIMED_TOKENS.setdefault(_w.rstrip("$"), set()).add(_r.issue)
+
 # A draft is "moving air" + "aimed at me". Composing the two lexicons catches
 # phrasings no phrase list would ("AC ki hawa direct desk pe aa rahi hai").
 AIR_NOUNS: tuple = ("hawa", "air", "ac", "vent", "blower", "fan", "kaatru", "kaathu",
@@ -738,20 +748,27 @@ def _match_rule(norm: Normalized, rule: IntentRule, masked: list = ()) -> list:
             hits.append((p, "exact", i))
         elif p in norm.squeezed:
             hits.append((p, "exact", 0))         # only matched after squeezing
+    def claimed_elsewhere(tok: str) -> bool:
+        """True when `tok` is exactly some OTHER issue's lexicon word — such a
+        token is that entry's evidence, never a prefix/typo of this rule's."""
+        owners = _CLAIMED_TOKENS.get(tok)
+        return bool(owners) and rule.issue not in owners
+
     for w in rule.words:
         exact_only = w.endswith("$")
         term = w[:-1] if exact_only else w
         for tok, off in zip(norm.tokens, norm.offsets):
             if hidden(off):
                 continue
-            if tok == term or (not exact_only and tok.startswith(term)):
+            if tok == term or (not exact_only and tok.startswith(term)
+                               and not claimed_elsewhere(tok)):
                 hits.append((term, "exact", off))
                 break
         else:
             if exact_only:
                 continue
             for tok, off in zip(norm.tokens, norm.offsets):
-                if not hidden(off) and fuzzy_hit(tok, term):
+                if not hidden(off) and fuzzy_hit(tok, term) and not claimed_elsewhere(tok):
                     hits.append((term, "fuzzy", off))
                     break
     return hits
@@ -801,8 +818,21 @@ def detect_intent(norm: Normalized) -> Intent:
     """
     out = Intent()
     per_issue: dict = {}
-    masked = _idiom_spans(norm.text)
+    idioms = _idiom_spans(norm.text)
+    # A matched phrase CLAIMS its span: tokens inside it may not feed another
+    # issue's word matching. "space heater" (a too_cold sarcasm phrase) contains
+    # "heater", which would otherwise prefix-match the too_hot word "heat" and
+    # force a fake hot/cold collision. Same mechanism as idiom masking.
+    phrase_spans: list = []
     for rule in INTENT_TABLE:
+        for p in rule.phrases:
+            i = norm.text.find(p)
+            while i >= 0 and any(a <= i < b for a, b in idioms):
+                i = norm.text.find(p, i + 1)
+            if i >= 0:
+                phrase_spans.append((i, i + len(p), rule.issue))
+    for rule in INTENT_TABLE:
+        masked = idioms + [(a, b) for a, b, iss in phrase_spans if iss != rule.issue]
         hits = _match_rule(norm, rule, masked)
         if hits:
             cur = per_issue.setdefault(rule.issue, [rule.kind, []])
@@ -1024,6 +1054,20 @@ def rules_parse(text: str) -> ParsedComplaint:
                                confidence=0.8, reasoning=why[intent.veto], **base).clean()
 
     if intent.issue is None:
+        # Acute distress ("unbearable", "cant work", "dying") in a NAMED zone,
+        # with no direction word: a person is suffering in a room the parser
+        # identified. Guessing a direction would be wrong; silence is worse.
+        # File it as a comfort complaint that requires clarification — issue
+        # "other" carries zero setpoint offset, so nothing moves until they say
+        # which way, but the operator and the feed see the distress.
+        if zones and any(w in norm.padded for w in _SEV3):
+            return ParsedComplaint(
+                is_comfort_complaint=True, zone_ids=zones, zone_confidence=zconf,
+                issue="other", severity=3, confidence=0.40,
+                requires_clarification=True,
+                reasoning="Rules: acute distress in a named zone, but no "
+                          "hot/cold/air direction — asking instead of guessing.",
+                **base).clean()
         conf = score_confidence(norm, zones, zconf, intent, 1)
         return ParsedComplaint(
             is_comfort_complaint=False, zone_ids=zones, zone_confidence=zconf,

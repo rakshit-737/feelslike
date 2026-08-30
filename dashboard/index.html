@@ -244,7 +244,7 @@
 
 <div class="tiles">
   <div class="tile"><div class="lbl">Cost saved</div>
-    <div class="val" id="rs">—</div><div class="sub">at ₹9 / kWh</div></div>
+    <div class="val" id="rs">—</div><div class="sub" id="rs-sub">at ₹9 / kWh</div></div>
   <div class="tile"><div class="lbl">CO₂ avoided</div>
     <div class="val" id="co2">—</div><div class="sub">0.71 kg / kWh grid factor</div></div>
   <div class="tile"><div class="lbl">Complaint → action</div>
@@ -492,6 +492,13 @@ function renderOverview(s){
       · <b class="c-crit">${vBase.toLocaleString('en-IN')} min</b> baseline. Savings without sacrifice.`;
 
     $('rs').textContent='₹'+s.meters.saved_rs.toLocaleString('en-IN');
+    /* additive: the same measured kWh repriced at the verified TANGEDCO ToD
+       tariff — display only; detail lives on the Analytics tab */
+    const tou=s.meters.tou;
+    if(tou && tou.window_h>0){
+      $('rs-sub').textContent='₹9 flat · ₹'+tou.saved_rs.toLocaleString('en-IN')
+        +' at TN ToD ('+tou.window_h+'h window)';
+    }
     $('co2').textContent=s.meters.saved_co2.toFixed(1)+' kg';
 
     /* zones with an unresolved conflict (opposing constraints still active) */

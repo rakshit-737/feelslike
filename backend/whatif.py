@@ -642,7 +642,12 @@ def state_fingerprint(twin, store=None) -> str:
     if store is not None:
         state["store"] = [
             [c.id, c.zone, c.issue, c.severity, r(c.confidence), r(c.created_t),
-             r(c.raw_offset), c.vent_delta, c.author, c.text]
+             r(c.raw_offset), c.vent_delta, c.author, c.text,
+             # expiry is now a flag, not a clock move — the fingerprint must see
+             # it (and approve/reject) or a stray mutation of the LIVE store
+             # would slip past the isolation proof
+             None if getattr(c, "cleared_t", None) is None else r(c.cleared_t),
+             bool(getattr(c, "approved", True)), bool(getattr(c, "rejected", False))]
             for c in store.items
         ]
         if hasattr(store, "objective"):

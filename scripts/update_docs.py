@@ -50,6 +50,15 @@ CAPABILITIES: dict = {
     "maintenance":    (False, "Capacity, sensor, actuator and recurring faults are detected from evidence."),
     "humidity":       (False, "Zone humidity, dew point and latent load are modelled and reported."),
     "safety_modes":   (False, "Five operating modes from fully automatic to maintenance lockout."),
+    # --- finals phase (2026-08-30). Flip only after the team has SEEN the
+    # verified output. Note: flipping hardware/calibration/feasibility also
+    # needs their deck slides authored — the gate stops claims, it does not
+    # write new slides by itself.
+    "hardware":       (False, "One physical zone (ESP32 sensing + a real fan) runs through the same adapter seam and conformance gate as the simulation."),
+    "calibration":    (False, "The twin's R and C are fitted to a logged hardware step response — measured-vs-model overlay in the deck."),
+    "feasibility":    (False, "Priced BOM, two deployment paths, and a labeled payback model under the verified TANGEDCO tariff (docs/FEASIBILITY.md)."),
+    "tou_display":    (False, "The measured energy series is repriced live at the verified time-of-day tariff — display only, flat-tariff control unchanged."),
+    "rl_trajectory":  (False, "The PPO training curve and its measured ablation are shown in-product beside the ship decision."),
 }
 
 

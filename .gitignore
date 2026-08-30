@@ -14,6 +14,11 @@ rl/train_log.txt
 
 # generated / transient doc artifacts
 docs/*.backup.pptx
+docs/*.backup.docx
 docs/~$*
+
+# editor state + internal working notes
+.vscode/
+FINALS_PROMPT.md
 __pycache__/
 .pytest_cache/

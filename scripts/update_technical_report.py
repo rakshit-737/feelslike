@@ -249,7 +249,8 @@ def update_document(facts: dict, dry_run: bool) -> list:
     if llm_triple is not None:
         comparison = (
             f" On the same probe the rules parser scores {bp['triple']}% exact triple against "
-            f"the LLM path’s {llm_triple}% — a gap of {gap} message(s) on twenty, which "
+            f"the LLM path’s {llm_triple}% — a gap of {gap} message{'' if gap == 1 else 's'} "
+            f"in {b['n']}, which "
             f"is a reason to keep measuring both paths rather than evidence that either one wins.")
     edit(doc, lambda t: t.startswith("Twenty cases is a small sample"),
          lambda _o: (
@@ -262,12 +263,13 @@ def update_document(facts: dict, dry_run: bool) -> list:
          "sample-size paragraph", log)
 
     update_parser_table(doc, facts, log)
-    edit(doc, lambda t: t == "Failure cases from the held-out set",
+    edit(doc, lambda t: t.startswith("Failure cases from"),
          lambda _o: "Failure cases from the blind probe",
          "failure section heading", log)
     update_failure_list(doc, facts, log)
 
-    edit(doc, lambda t: t.startswith("The third case is the one"),
+    edit(doc, lambda t: t.startswith("The third case is the one")
+         or t.startswith("The false-positive cases are the ones"),
          lambda _o: (
              "The false-positive cases are the ones that matter operationally, because they are "
              "the ones that reach the controller. The severity and decay mechanism bounds the "

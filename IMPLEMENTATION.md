@@ -122,6 +122,20 @@ Team split (3–5 people): A = integrations/frontend, B = NLP/eval, C = RL/sim,
 | End-to-end integration | live Slack → LLM → constraint → twin → dashboard in <10 s |
 | Frictionless UX | one chat message vs a facilities ticket; no forms, no app installs |
 
+### 5b. Problem-statement coverage map (checked against the brief PPTX, 2026-08-30)
+
+| Brief asks for | Where it lives | Status |
+|---|---|---|
+| NL ingestion via Teams/Slack/web | `POST /api/slack` (form + JSON), web chat, `dashboard/occupant.html` | shipped |
+| LLM "feels-like" translation → constraints (location, temp offset, humidity) | `backend/parser.py` → `Constraint` (`too_hot/too_cold/stuffy/humid/drafty`, °C offsets + vent deltas) | shipped, blind-probe measured |
+| Digital twin; test adjustments before physical hardware | `sim/twin.py` + clone-based what-if engine (`backend/whatif.py`) + the adapter seam with a real ESP32 implementation | shipped |
+| RL agent adjusting setpoints under LLM constraints + weather + energy | `sim/env.py` (constraints in obs + reward), PPO 2M steps, ablation table, learning curve | **trained + measured; NOT the live demo controller** — M4 decision: 512.7 kWh/22 viol-min loses to rules 530.3/0 at equal-comfort; presented as trajectory |
+| Optimize against real-time weather and **pricing** data | weather: seeded synthetic (A/B determinism) + `fetch_openmeteo` adapter path; pricing: **flat ₹9/kWh only** | **partial — flat tariff is the honest label**; cost objective exists, and `OBJECTIVE_WEIGHTS`' cost row is the documented landing place for a ToU tariff |
+| Sustainability & ROI dashboard vs baseline | race meters, money/carbon tiles, analytics panel; payback math in `docs/FEASIBILITY.md` | shipped |
+| ≥3 optional features | multi-zone complaints, comfort memory, conflict arbitration, what-if, maintenance detection, safety modes, privacy/PII scrub, retraction handling, hardware-in-the-loop | exceeded |
+
+The two "partial" rows are answered proactively in Q&A (§8b) rather than hidden.
+
 ## 6. Risk register (pre-committed fallbacks)
 
 | Risk | Trigger | Fallback (already built) |
@@ -153,6 +167,102 @@ Standard 2R2C lumped-parameter model (literature-backed), zone coupling + solar 
 occupancy; calibration path: fit R/C from a week of BMS logs. "Path to production?"
 → Same architecture; twin swaps for BACnet/Modbus writes; complaints already come
 from the tools offices use. "Privacy?" → Zone-level aggregation, no identity needed.
+
+### 8b. Drill v2 — hardware, feasibility, AI (finals phase; every teammate, no notes)
+
+"How does this attach to a real building?" → Two named paths, both through the same
+five adapter protocols in `backend/adapters.py`. No-BMS office (the Indian majority):
+our ESP32 sensor nodes + IR blasters for split ACs + smart plugs — sensing and
+on/off + mode control, honest about what a setpoint write can't do there. BMS
+building: BACnet AV/AO + MSO objects or Modbus holding registers bound to the same
+three writes the controller already makes — `write_setpoint`, `write_vent`,
+`read_state`. The point list per zone is five reads and two writes; it is printed in
+the adapters module docstring. Our demo rig is the first real implementation of that
+seam, and it passes the same conformance test the simulated adapters pass.
+
+"What does one zone cost?" → The priced bill of materials with sources and dates is
+in `docs/FEASIBILITY.md`, including the 20-zone floor total and payback under the
+verified Tamil Nadu commercial tariff, with every scaling assumption labeled.
+[Numbers quoted from FEASIBILITY.md at rehearsal — never from memory.]
+
+"What if a sensor drifts or dies?" → Health is INFERRED, never self-reported: the
+sensor adapter checks staleness, stuck values, out-of-range, and physically
+impossible readings (dew point above dry bulb). A dead node reads as a dropout, the
+zone falls back to schedule control — the same behaviour as every other zone with no
+constraints — and the maintenance panel raises an alert with the numeric evidence.
+Nothing chases a broken reading.
+
+"Would you trust this on a real building?" → The safety model is layered and none of
+the layers is software we wrote trusting ourselves: (0) a physical switch in the rig's
+actuator supply, (1) a firmware watchdog — no server response for 10 s means
+actuators off, (2) a server-side envelope — setpoints clamped to 21.5–29.0 °C,
+complaint offsets to ±1.8 °C, fan 0–2, heater duty-capped at 50% of any 10-minute
+window. And the controller's `emergency_override` and `maintenance_lockout` modes
+exist precisely because occupant input must never outrank plant safety.
+
+"Why an RC model and not CFD?" → CFD answers "where exactly is the warm spot" at
+minutes-per-frame; control needs "what will this zone do in the next quarter hour" at
+milliseconds-per-decision. Lumped RC is the standard control-oriented abstraction
+(2R2C per zone, literature-backed), it runs 960× faster than real time on a laptop,
+and — the part we can defend physically — we fit its R and C to a logged step
+response from real hardware (`scripts/fit_rc.py`; recovery within 5% on synthetic
+truth at SHT31 noise). A model you can calibrate beats a model you can only render.
+
+"Why not just occupancy sensors and a timer?" → That's our baseline, roughly: the
+static schedule IS the timer, and the reactive thermostat is the sensor. The
+measured answer: reactive saves 31.7% but books 429 violation-minutes — it saves by
+letting people be uncomfortable. FeelsLike saves 26.6% at zero violation-minutes,
+because complaints carry information a PIR can't: *which* discomfort, how severe,
+and when it stops being true. A timer cannot arbitrate "too hot" against "too cold"
+in the same room.
+
+"Why HTTP and not MQTT for the rig?" → Chosen, not defaulted (decision log §8 in
+STATUS.md): zero new runtime dependencies, no broker process to die on stage, works
+over a phone hotspot on hostile venue Wi-Fi, and commands ride the poll response so
+there is exactly one moving part. MQTT/BACnet is the production transport — the
+adapter seam is what makes that a swap, not a rewrite.
+
+"Why doesn't humidity change your kWh numbers?" → Documented modeling assumption,
+not an oversight: latent load is tracked and reported (`humid_viol_min`, `mean_rh`)
+but never charged to kWh, because charging it would silently move the frozen A/B
+headline numbers the report already publishes. The limitation is stated in
+`sim/twin.py`'s docstring and in the limitations register — we would rather show a
+smaller, true number than a bigger, moved one.
+
+"Your parser is only 45–55% exact-triple. Why ship it?" → Because the number that
+matters for safety is the zone set at 90% with zero invented zones and a
+clarify-don't-guess rule: a complaint with no confident zone asks a question instead
+of acting. The 45% (rules) / 55% (LLM) figures are from blind probe v2, measured
+once — and the probe ROTATES: v1 was burned the moment we studied its failures, the
+runner refuses burned probes, and the tuned dev set's 100% is exactly the number we
+refuse to quote. Wrong-but-actionable parses are bounded by severity clamps, decay,
+and the ±1.8 °C offset cap; the failure log is committed, not curated.
+
+"The brief says optimize against pricing data — do you?" → Against a flat verified
+commercial tariff, yes — and we say "flat" out loud. With a flat ₹/kWh, minimizing
+rupees IS minimizing kilowatt-hours, which is exactly why our cost and carbon
+objectives share weights (documented in DATA_CONTRACTS §1 — different weights would
+be fake precision). A time-of-use tariff is the named next step and has one obvious
+landing place: the cost row of `OBJECTIVE_WEIGHTS` plus a tariff curve where
+`TARIFF` sits today. We chose not to invent a ToU optimization we couldn't verify.
+
+"Why isn't the RL agent driving the demo?" → It was measured and it lost the
+tiebreak we care about: PPO saves 29% but books 22 violation-minutes; the
+constraint-aware controller saves 26.6% at zero. Zero-violations is the thesis, so
+the demo ships the controller that holds it, and the PPO run — 2M steps, learning
+curve, ablation over 10 random days — is shown as trajectory. The RL environment
+does consume LLM constraints (they're in the observation and the reward), so the
+brief's loop exists and is measured; we just refused to ship the weaker comfort
+number. Decision logged before finals, not after a question.
+
+"What did AI build, and what did you build?" → AI (disclosed in-product via
+`AIDisclosure`, and used as an assistant throughout the code): the LLM parser path —
+one measured component with an offline rules fallback, so the demo never depends on
+it. We own and can whiteboard every load-bearing decision: the RC physics and its
+hardware calibration, the constraint decay/arbitration design and its weights, the
+safety envelope numbers, the A/B lock-step evidence design, the blind-probe and
+capability-gate honesty machinery, and the hardware architecture. Ask us to draw any
+of it — no notes.
 
 ## 9. The 3-minute demo script
 

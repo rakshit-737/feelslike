@@ -398,6 +398,10 @@
   function twinPanel() {
     var root, errBox, sendErr, sendOut, zoneBox, resetBox, confirmTimer = null;
     var pending = {}, timers = {}, clamped = {}, confirming = false;
+    // Hardware rig (the mixed-reality zone). lastHw arrives on every /api/state
+    // poll; health + the reading log ride their own throttled endpoints.
+    var hwBox, hwTip, hwStatusTick, hwLogTick;
+    var lastHw = null, hwStatus = null, hwLog = [], hwRecs = [], lastState2 = null;
 
     function sliderRow(kn) {
       return '<div class="fl-slider" data-k="' + kn.k + '">' +
@@ -501,6 +505,157 @@
       }).catch(function (e) { out.textContent = ''; showErr(sendErr, e); });
     }
 
+    /* ---- the physical zone (backend/hardware.py bridge) ------------------ */
+
+    /** Measured-air line over the last 30 min, heater-on spans shaded, the
+     *  twin's simulated temperature for the same zone as a dashed reference.
+     *  One measured series, so the card title names it and no legend box is
+     *  needed; the reference line is direct-labelled at its right edge. */
+    function hwChart(rows, twinTemp) {
+      if (rows.length < 3) {
+        hwRecs = [];
+        return '<div class="fl-note">The measured curve appears after a few node polls' +
+          ' (about ' + esc(String(rows.length)) + ' so far).</div>';
+      }
+      var now = rows[rows.length - 1].t_wall;
+      var win = rows.filter(function (r) { return isNum(r.temp_c) && now - r.t_wall <= 1800; });
+      if (win.length < 3) { hwRecs = []; return '<div class="fl-note">warming up…</div>'; }
+      var step = Math.ceil(win.length / 240);
+      var pts = [];
+      for (var i = 0; i < win.length; i += step) pts.push(win[i]);
+      if (pts[pts.length - 1] !== win[win.length - 1]) pts.push(win[win.length - 1]);
+
+      var W = 700, H = 190, L = 40, R = 74, T = 12, B = 22;
+      var pw = W - L - R, ph = H - T - B;
+      var t0 = pts[0].t_wall, t1 = pts[pts.length - 1].t_wall;
+      var vals = pts.map(function (p) { return p.temp_c; });
+      if (isNum(twinTemp)) vals.push(twinTemp);
+      var lo = Math.min.apply(null, vals) - 0.4, hi = Math.max.apply(null, vals) + 0.4;
+      var X = function (t) { return L + pw * (t - t0) / Math.max(1, t1 - t0); };
+      var Y = function (v) { return T + ph * (1 - (v - lo) / Math.max(0.1, hi - lo)); };
+
+      var s = '';
+      // heater-on spans first, under everything else
+      var spanStart = null;
+      for (var j = 0; j < pts.length; j++) {
+        var on = !!pts[j].heater;
+        if (on && spanStart === null) spanStart = pts[j].t_wall;
+        if ((!on || j === pts.length - 1) && spanStart !== null) {
+          var end = on ? pts[j].t_wall : pts[Math.max(0, j - 1)].t_wall;
+          s += '<rect x="' + X(spanStart).toFixed(1) + '" y="' + T + '" width="' +
+            Math.max(1, X(end) - X(spanStart)).toFixed(1) + '" height="' + ph +
+            '" fill="var(--warn)" fill-opacity="0.08"/>';
+          spanStart = null;
+        }
+      }
+      for (var g = 0; g <= 3; g++) {
+        var gy = T + ph * g / 3, gv = hi - (hi - lo) * g / 3;
+        s += '<line x1="' + L + '" y1="' + gy.toFixed(1) + '" x2="' + (L + pw) + '" y2="' + gy.toFixed(1) +
+          '" stroke="var(--grid)"/><text x="' + (L - 5) + '" y="' + (gy + 3.5).toFixed(1) +
+          '" text-anchor="end" ' + AXIS + '>' + gv.toFixed(1) + '</text>';
+      }
+      if (isNum(twinTemp)) {
+        s += '<line x1="' + L + '" y1="' + Y(twinTemp).toFixed(1) + '" x2="' + (L + pw) +
+          '" y2="' + Y(twinTemp).toFixed(1) +
+          '" stroke="var(--base)" stroke-width="1.5" stroke-dasharray="4 4"/>' +
+          '<text x="' + (L + pw + 5) + '" y="' + (Y(twinTemp) + 3.5).toFixed(1) +
+          '" font-size="10.5" fill="var(--ink2)">twin (sim)</text>';
+      }
+      var path = pts.map(function (p, k) {
+        return (k ? 'L' : 'M') + X(p.t_wall).toFixed(1) + ' ' + Y(p.temp_c).toFixed(1);
+      }).join(' ');
+      s += '<path d="' + path + '" fill="none" stroke="var(--us)" stroke-width="2"/>';
+      var lastPt = pts[pts.length - 1];
+      s += '<text x="' + (L + pw + 5) + '" y="' + (Y(lastPt.temp_c) + 3.5).toFixed(1) +
+        '" font-size="10.5" font-weight="600" fill="var(--us)">measured</text>';
+      s += '<text x="' + L + '" y="' + (H - 5) + '" ' + AXIS + '>-' +
+        Math.round((t1 - t0) / 60) + ' min</text>' +
+        '<text x="' + (L + pw) + '" y="' + (H - 5) + '" text-anchor="end" ' + AXIS + '>now</text>';
+      hwRecs = pts;
+      var hitW = pw / pts.length;
+      pts.forEach(function (p, k) {
+        s += '<rect data-i="' + k + '" x="' + (X(p.t_wall) - hitW / 2).toFixed(1) + '" y="' + T +
+          '" width="' + hitW.toFixed(1) + '" height="' + ph + '" fill="var(--us)" fill-opacity="0"/>';
+      });
+      return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" class="fl-chart" id="fl-hw-svg">' +
+        s + '</svg>' +
+        '<div class="fl-note">Amber shading = calibration heater on. Dashed line = the twin’s ' +
+        'simulated temperature for the same zone — the live sim-to-real gap the calibration ' +
+        '(scripts/fit_rc.py) closes.</div>';
+    }
+
+    function paintHw() {
+      if (!hwBox) return;
+      var hw = lastHw;
+      if (!hw || !hw.node_id) {
+        paint(hwBox, card('Physical zone · shoebox rig', 'backend/hardware.py · POST /api/hw/reading',
+          empty('No hardware node has reported yet', [
+            'One twin zone can bind to a real ESP32 node (temp/RH sensor + fan + calibration heater).',
+            'Flash hardware/firmware/feelslike_node/feelslike_node.ino, point GATEWAY_URL at this server,',
+            'and this card comes alive. The server side is fully tested against a mock node —',
+            'the demo does not depend on the rig existing.'])));
+        return;
+      }
+      var r = hw.reading || {};
+      var health = (hwStatus && hwStatus.sensor_health) || null;
+      var conn = !!hw.connected;
+      var zoneName = (lastState2 && (lastState2.zones || []).filter(function (z) {
+        return z.id === hw.zone;
+      })[0]) || null;
+      var twinTemp = zoneName ? zoneName.temp : null;
+      var dutyPct = clamp((hw.duty || 0) * 100, 0, 100);
+      var capPct = clamp((hw.duty_cap || 0.5) * 100, 0, 100);
+
+      var head = badge(conn ? 'CONNECTED' : 'OFFLINE', conn ? 'good' : 'crit') + ' ' +
+        chip(hw.node_id) + ' ' + chip('mirrors', zoneName ? zoneName.name : hw.zone) +
+        (isNum(hw.stale_s) ? ' <span class="fl-note fl-num">last reading ' + f(hw.stale_s, 1) +
+          ' s ago · ' + iN(hw.polls) + ' polls</span>' : '') +
+        (health && health.faults && health.faults.length
+          ? ' ' + health.faults.map(function (ft) { return badge(ft.toUpperCase(), 'warn'); }).join(' ')
+          : (health && health.ok ? ' ' + badge('SENSOR OK', 'good') : ''));
+
+      var body = '<div class="fl-row">' + head + '</div>' +
+        '<div class="fl-grid" style="margin-top:8px">' +
+        tile('Measured air', conn && isNum(r.temp_c) ? f(r.temp_c, 2) + ' °C' : '—',
+          conn ? 'esp32-http · seq ' + iN(r.seq) : 'no fresh reading') +
+        tile('Measured RH', conn && isNum(r.rh_pct) ? f(r.rh_pct, 0) + ' %' : '—',
+          r.rh_pct === null ? 'sensor has no RH point' : '') +
+        tile('Twin says', isNum(twinTemp) ? f(twinTemp, 1) + ' °C' : '—',
+          'simulated ' + (zoneName ? zoneName.name : hw.zone)) +
+        tile('Fan (real)', String(hw.fan), isNum(hw.fan_w) ? f(hw.fan_w, 1) + ' W · controller-driven' : '') +
+        '</div>' +
+        '<div class="fl-hr"></div>' +
+        '<div class="fl-row"><span class="fl-lbl">Calibration heater</span>' +
+        badge(hw.heater ? 'ON' : 'OFF', hw.heater ? 'warn' : 'muted') +
+        (hw.duty_limited ? badge('DUTY CAP HOLDING IT OFF', 'crit') : '') +
+        '<span class="fl-duty" title="heater on-time over the last ' +
+        Math.round((hw.duty_window_s || 600) / 60) + ' min · cap ' + capPct.toFixed(0) + '%">' +
+        '<i style="width:' + dutyPct.toFixed(1) + '%"></i><b style="left:' + capPct.toFixed(0) + '%"></b></span>' +
+        '<span class="fl-note fl-num">' + dutyPct.toFixed(0) + '% of last ' +
+        Math.round((hw.duty_window_s || 600) / 60) + ' min</span>' +
+        '<button class="fl-btn" data-act="hw-heat-on"' + (hw.heater_requested ? ' disabled' : '') +
+        '>heater on</button>' +
+        '<button class="fl-btn" data-act="hw-heat-off"' + (hw.heater_requested ? '' : ' disabled') +
+        '>heater off</button></div>' +
+        '<div class="fl-note">Manual step-input for fitting R and C of the twin’s zone model — ' +
+        'never a controller output. Server caps it at ' + capPct.toFixed(0) + '% of any ' +
+        Math.round((hw.duty_window_s || 600) / 60) + '-minute window; the firmware watchdog kills both ' +
+        'actuators within ' + f(hw.watchdog_s, 0) + ' s if this server goes silent.</div>' +
+        '<div class="fl-hr"></div>' + hwChart(hwLog, twinTemp);
+
+      var wrote = paint(hwBox, card('Physical zone · shoebox rig',
+        'same controller, same adapter seam — vent commands drive a real fan', body));
+      if (wrote && hwRecs.length) {
+        hover(root.querySelector('#fl-hw-svg'), hwTip, hwRecs, function (p) {
+          return '<b>' + f(p.temp_c, 2) + ' °C</b>' +
+            (isNum(p.rh_pct) ? ' · ' + f(p.rh_pct, 0) + ' %RH' : '') +
+            '<br>fan ' + esc(String(p.fan)) + ' · heater ' + (p.heater ? 'on' : 'off') +
+            '<br><span class="fl-dim">' + Math.round((hwLog[hwLog.length - 1].t_wall - p.t_wall)) +
+            ' s ago · seq ' + esc(String(p.seq)) + '</span>';
+        });
+      }
+    }
+
     function paintReset() {
       resetBox.innerHTML = confirming
         ? '<div class="fl-confirm"><div class="fl-sub">This rebuilds both twins, the constraint store, ' +
@@ -524,6 +679,7 @@
             '<div class="fl-err" hidden id="fl-twin-err"></div>' +
             '<div class="fl-note" style="margin-top:8px">Values are what /api/conditions echoed back, ' +
             'not what the slider guessed. Out-of-range requests are clamped by the twin and said so.</div>') +
+          '<div id="fl-twin-hw"></div>' +
           card('Zones right now', 'FeelsLike twin · baseline column is the static-22 partner',
             '<div id="fl-twin-zones"></div>') +
           card('Speak to the building', 'the real parser, the real constraint store',
@@ -549,7 +705,19 @@
         sendOut = root.querySelector('#fl-twin-sendout');
         zoneBox = root.querySelector('#fl-twin-zones');
         resetBox = root.querySelector('#fl-twin-reset');
+        hwBox = root.querySelector('#fl-twin-hw');
+        hwTip = tipFor(root);
+        hwStatusTick = poller(function () {
+          return GET('/api/hw/status').then(function (r) { hwStatus = r; paintHw(); });
+        }, 3000);
+        hwLogTick = poller(function () {
+          return GET('/api/hw/log?limit=1200').then(function (r) {
+            hwLog = r.rows || [];
+            paintHw();
+          });
+        }, 5000);
         paintReset();
+        paintHw();
 
         root.addEventListener('input', function (e) {
           var row = e.target.closest ? e.target.closest('.fl-slider') : null;
@@ -575,6 +743,12 @@
             inject('it feels really stuffy in ' + zname);
           } else if (act === 'air-down' && zname) {
             inject('it is too drafty in ' + zname);
+          } else if (act === 'hw-heat-on' || act === 'hw-heat-off') {
+            b.disabled = true;
+            POST('/api/hw/heater', { on: act === 'hw-heat-on' }).then(function () {
+              clearErr(errBox);
+              hwStatusTick(true);            // reflect the envelope's verdict now
+            }).catch(function (err) { showErr(errBox, err); b.disabled = false; });
           } else if (act === 'ask') {
             confirming = true; paintReset();
             confirmTimer = setTimeout(function () { confirming = false; paintReset(); }, 6000);
@@ -605,6 +779,13 @@
         if (!visible(root)) return;
         paintKnobs((state.sim && state.sim.conditions) || {});
         paintZones(state);
+        lastState2 = state;
+        lastHw = state.hardware || null;
+        paintHw();
+        if (lastHw && lastHw.node_id) {
+          hwStatusTick(false);
+          if (lastHw.connected) hwLogTick(false);
+        }
         var sel = root.querySelector('#fl-twin-zone');
         var ids = (state.zones || []).map(function (z) { return z.id; }).join(',');
         if (sel && sel.getAttribute('data-ids') !== ids) {
@@ -1376,8 +1557,26 @@
   // =========================================================================
 
   function analyticsPanel() {
-    var root, box, errBox, tip, gate, tick, data = null;
+    var root, box, errBox, tip, gate, tick, data = null, lastTou = null;
     var heatRecs = [], energyRecs = [], hourRecs = [], ctrlRecs = [];
+
+    /** ToD tariff card: the SAME measured kWh repriced at the verified TANGEDCO
+     *  LT-V ToD structure — display only, and the card says so. Data rides
+     *  /api/state -> meters.tou (backend/tariff.py). */
+    function touCard() {
+      var t = lastTou;
+      if (!t || !(t.window_h > 0)) return '';
+      return card('Time-of-day tariff view', esc(t.tariff || ''),
+        tiles([
+          ['Rate right now', '₹' + f(t.rate_now_rs, 2) + '/kWh',
+            String(t.band_now || '') + ' band'],
+          ['FeelsLike cost', '₹' + iN(t.us_rs), 'ToD, ' + f(t.window_h, 1) + ' h window'],
+          ['Baseline cost', '₹' + iN(t.base_rs), 'ToD, same window'],
+          ['Saved at ToD', '₹' + iN(t.saved_rs), 'vs ₹' + f(t.base_rate_rs, 2) + '/kWh base']
+        ]) +
+        '<div class="fl-note" style="margin-top:8px">Peak (06–10, 18–22) +25% · night (22–05) −5%. ' +
+        esc(t.note || '') + '</div>');
+    }
 
     function heatmap(hm) {
       var zones = hm.zones || [], hours = hm.hours || [];
@@ -1490,6 +1689,7 @@
             ['Complaints', iN(cs.total), iN(cs.entries) + ' feed entries'],
             ['Interventions', iN(ct.interventions), pctU(ct.intervention_rate_pct, 1) + ' of decisions']
           ])) +
+        touCard() +
         card('Comfort heatmap', 'zone × hour of day · mean deviation from the band midpoint',
           heatmap(hm) +
           '<div class="fl-note">Deviation is averaged over OCCUPIED samples only — an empty room at 3 a.m. ' +
@@ -1580,9 +1780,10 @@
         }, 5000);
         render();
       },
-      update: function () {
+      update: function (state) {
         var g = gate();
         if (!g.on) return;
+        lastTou = (state && state.meters && state.meters.tou) || lastTou;
         tick(g.entered);
       }
     };
@@ -1662,6 +1863,77 @@
 
   function experimentsPanel() {
     var root, box, errBox, tip, gate, tick, data = null, recs = [];
+    var rl = null, rlTick, rlRecs = [];
+
+    /** PPO reward trajectory (rollout/ep_rew_mean vs steps). One measured
+     *  series; the card title names it, so no legend box. */
+    function rlChart(points) {
+      if (!points || points.length < 2) return '<div class="fl-note">no curve yet</div>';
+      var W = 700, H = 190, L = 52, R = 88, T = 12, B = 24;
+      var pw = W - L - R, ph = H - T - B;
+      var xs = points.map(function (p) { return p.steps; });
+      var ys = points.map(function (p) { return p.ep_rew_mean; });
+      var x0 = xs[0], x1 = xs[xs.length - 1];
+      var lo = Math.min.apply(null, ys), hi = Math.max.apply(null, ys);
+      var pad = Math.max(0.2, (hi - lo) * 0.08);
+      lo -= pad; hi += pad;
+      var X = function (v) { return L + pw * (v - x0) / Math.max(1, x1 - x0); };
+      var Y = function (v) { return T + ph * (1 - (v - lo) / Math.max(0.001, hi - lo)); };
+      var s = '';
+      for (var g = 0; g <= 3; g++) {
+        var gy = T + ph * g / 3, gv = hi - (hi - lo) * g / 3;
+        s += '<line x1="' + L + '" y1="' + gy.toFixed(1) + '" x2="' + (L + pw) + '" y2="' + gy.toFixed(1) +
+          '" stroke="var(--grid)"/><text x="' + (L - 5) + '" y="' + (gy + 3.5).toFixed(1) +
+          '" text-anchor="end" ' + AXIS + '>' + gv.toFixed(1) + '</text>';
+      }
+      var path = points.map(function (p, i) {
+        return (i ? 'L' : 'M') + X(p.steps).toFixed(1) + ' ' + Y(p.ep_rew_mean).toFixed(1);
+      }).join(' ');
+      s += '<path d="' + path + '" fill="none" stroke="var(--us)" stroke-width="2"/>';
+      var lastP = points[points.length - 1];
+      s += '<text x="' + (L + pw + 5) + '" y="' + (Y(lastP.ep_rew_mean) + 3.5).toFixed(1) +
+        '" font-size="10.5" font-weight="600" fill="var(--us)">ep_rew_mean</text>';
+      s += '<text x="' + L + '" y="' + (H - 6) + '" ' + AXIS + '>' + Math.round(x0 / 1000) + 'k steps</text>' +
+        '<text x="' + (L + pw) + '" y="' + (H - 6) + '" text-anchor="end" ' + AXIS + '>' +
+        (x1 / 1e6).toFixed(1) + 'M steps</text>';
+      rlRecs = points;
+      var hitW = pw / points.length;
+      points.forEach(function (p, i) {
+        s += '<rect data-i="' + i + '" x="' + (X(p.steps) - hitW / 2).toFixed(1) + '" y="' + T +
+          '" width="' + hitW.toFixed(1) + '" height="' + ph + '" fill="var(--us)" fill-opacity="0"/>';
+      });
+      return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" class="fl-chart" id="fl-xp-rl">' + s + '</svg>';
+    }
+
+    function rlCard() {
+      if (!rl) return card('RL trajectory', 'GET /api/rl', '<div class="fl-note">loading…</div>');
+      if (!rl.available) {
+        return card('RL trajectory', 'rl/models/progress.csv',
+          empty('No training log on disk', [rl.note || '',
+            'The API never regenerates this file — what you see is what was committed.']));
+      }
+      var tbl = (rl.table || []).map(function (r) {
+        var lead = /constraint-aware/.test(String(r.name));
+        return '<tr' + (lead ? ' class="fl-lead"' : '') + '><td>' + esc(r.name) + '</td>' +
+          '<td class="fl-num">' + f(r.kwh, 1) + '</td>' +
+          '<td class="fl-num">' + iN(r.viol_min) + '</td>' +
+          '<td class="fl-num">' + pctU(r.saved_pct, 1) + '</td></tr>';
+      }).join('');
+      return card('RL trajectory · PPO, 2M steps', 'shown as trajectory, not product — the M4 decision',
+        rlChart(rl.points) +
+        '<div class="fl-note">rollout/ep_rew_mean from the SB3 training log (reward = −energy −discomfort ' +
+        '−unmet complaints). Still climbing when training stopped' +
+        (rl.final ? ' — final ' + f(rl.final.ep_rew_mean, 1) + ' at ' +
+          (rl.final.steps / 1e6).toFixed(1) + 'M steps.' : '.') + '</div>' +
+        (tbl
+          ? '<div class="fl-hr"></div><div class="fl-lbl">Measured, 7 days, same seed</div>' +
+            '<div class="fl-scroll"><table class="fl-table"><tr>' +
+            ['Controller', 'kWh', 'Viol-min', 'Saved'].map(function (h) {
+              return '<th>' + esc(h) + '</th>';
+            }).join('') + '</tr>' + tbl + '</table></div>'
+          : '') +
+        '<div class="fl-sub" style="margin-top:6px">' + esc(rl.decision || '') + '</div>');
+    }
 
     function whiskers(rows) {
       if (!rows.length) return '';
@@ -1691,11 +1963,12 @@
     }
 
     function render() {
-      if (!data) { paint(box, '<div class="fl-note">loading…</div>'); return; }
+      if (!data) { paint(box, rlCard() + '<div class="fl-note">loading…</div>'); bindRl(); return; }
       if (!data.available) {
-        paint(box, empty('No saved sweep on disk', [
+        paint(box, rlCard() + empty('No saved sweep on disk', [
           data.note || '',
           'The API never regenerates this file, on purpose: what a judge sees here is exactly what was committed.']));
+        bindRl();
         return;
       }
       var sc = data.scenarios || {};
@@ -1719,6 +1992,7 @@
       });
 
       var wrote = paint(box,
+        rlCard() +
         card('Saved experiment sweep', esc(data.path || ''),
           tiles([
             ['Scenarios', String(keys.length), 'from the registry'],
@@ -1748,11 +2022,19 @@
               '<td class="fl-sub">' + esc(r.headline) + '</td></tr>';
           }).join('') + '</table></div>'));
 
-      if (!wrote) return;          // same markup: the existing hover still holds
+      if (!wrote) return;          // same markup: the existing hovers still hold
       hover(root.querySelector('#fl-xp-svg'), tip, recs, function (r) {
         return '<b>' + esc(r.label) + '</b><br>baseline ' + f(r.base, 2) + ' kWh<br>scenario ' +
           f(r.scen, 2) + ' kWh<br>Δ ' + sgn(r.abs, 2) + ' kWh (' + pctS(r.pct, 1) + ')<br>' +
           '<span class="fl-note">±' + f(r.ciPct, 1) + '% CI95 across seeds</span>';
+      });
+      bindRl();
+    }
+
+    function bindRl() {
+      hover(root.querySelector('#fl-xp-rl'), tip, rlRecs, function (p) {
+        return '<b>' + (p.steps / 1e6).toFixed(2) + 'M steps</b><br>ep_rew_mean ' +
+          f(p.ep_rew_mean, 2);
       });
     }
 
@@ -1772,13 +2054,20 @@
           return GET('/api/experiments').then(function (r) { clearErr(errBox); data = r; render(); })
             .catch(function (e) { showErr(errBox, e); });
         }, 30000);
-        root.querySelector('#fl-xp-reload').addEventListener('click', function () { tick(true); });
+        rlTick = poller(function () {
+          return GET('/api/rl').then(function (r) { rl = r; render(); })
+            .catch(function () { /* the sweep card still renders */ });
+        }, 30000);
+        root.querySelector('#fl-xp-reload').addEventListener('click', function () {
+          tick(true); rlTick(true);
+        });
         render();
       },
       update: function () {
         var g = gate();
         if (!g.on) return;
         tick(g.entered);
+        rlTick(g.entered);
       }
     };
   }
@@ -2191,6 +2480,11 @@
       'overflow:hidden;}',
       '.fl-hbar-t i{display:block;height:100%;background:var(--us);opacity:0.85;}',
       '.fl-hbar-v{font-variant-numeric:tabular-nums;color:var(--ink2);text-align:right;}',
+      /* hardware rig */
+      '.fl-duty{position:relative;display:inline-block;width:120px;height:9px;background:var(--page);',
+      'border:1px solid var(--grid);border-radius:99px;overflow:hidden;vertical-align:middle;}',
+      '.fl-duty i{display:block;height:100%;background:var(--warn);opacity:0.8;}',
+      '.fl-duty b{position:absolute;top:0;bottom:0;width:2px;background:var(--crit);}',
       /* maintenance */
       '.fl-alert{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;}',
       '.fl-alert.resolved{opacity:0.72;}',

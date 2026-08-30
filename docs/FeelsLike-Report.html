@@ -248,9 +248,11 @@ and messages that merely <i>mention</i> a room without complaining about it.
 <b>Primary — LLM structured extraction.</b> A system prompt carries the schema, the known
 zone list with aliases, explicit anti-hallucination rules, and worked examples (including
 Hinglish and the projector-is-broken negative). Any OpenAI-compatible provider works via
-<code>LLM_BASE_URL</code>: Anthropic Claude, OpenAI, or free tiers — Groq (Llama 3.3 70B,
-sub-second), Google AI Studio (Gemini 2.5 Flash), or a fully local Ollama model. The demo
-runs on Groq's free tier at zero cost.
+<code>LLM_BASE_URL</code>: Anthropic Claude, OpenAI, or free tiers — Groq (gpt-oss-120b,
+~2&nbsp;s), Google AI Studio (Gemini 2.5 Flash), or a fully local Ollama model. The demo
+runs on Groq's free tier at zero cost. (Provider models rotate — Groq decommissioned the
+Llama 3.3 70B this project first measured with; the parser's fallback made that a
+non-event, which is rather the point.)
 </p>
 <p>
 <b>Fallback — deterministic rules.</b> Keyword-cascade parser: most-specific issue first
@@ -453,18 +455,18 @@ matching ("the coffee machine is steaming hot again"). Those cases were later de
 against, which is what retired them as a generalization measure — see the blind probe below.
 </p>
 <table>
-<tr><th>Metric</th><th>Rules · dev (30)</th><th>Rules · held-out (40)</th><th>LLM · dev (30)</th><th>LLM · held-out (20)</th></tr>
+<tr><th>Metric</th><th>Rules · dev (30)</th><th>Rules · held-out (40)</th><th>LLM · dev (30)</th><th>LLM · held-out (40)</th></tr>
 
         <tr><td>Complaint detection</td><td>30/30 (100%)</td><td>40/40 (100%)</td>
-            <td>30/30 (100%)</td><td class="hl">15/20 (75%)</td></tr>
+            <td>30/30 (100%)</td><td class="hl">40/40 (100%)</td></tr>
         <tr><td>Zone extraction</td><td>30/30 (100%)</td><td>39/40 (98%)</td>
-            <td>30/30 (100%)</td><td class="hl">17/20 (85%)</td></tr>
+            <td>30/30 (100%)</td><td class="hl">38/40 (95%)</td></tr>
         <tr><td>Issue extraction</td><td>30/30 (100%)</td><td>40/40 (100%)</td>
-            <td>30/30 (100%)</td><td class="hl">16/20 (80%)</td></tr>
+            <td>30/30 (100%)</td><td class="hl">40/40 (100%)</td></tr>
         <tr><td><b>Exact triple</b></td><td><b>30/30 (100%)</b></td><td><b>39/40 (98%)</b></td>
-            <td><b>30/30 (100%)</b></td><td class="hl"><b>12/20 (60%)</b></td></tr>
+            <td><b>30/30 (100%)</b></td><td class="hl"><b>38/40 (95%)</b></td></tr>
 </table>
-<p class="figcap">LLM = Llama 3.3 70B via Groq free tier through the schema-validated prompt; identical guardrails on both parsers.
+<p class="figcap">LLM = gpt-oss-120b via Groq free tier through the schema-validated prompt; identical guardrails on both parsers.
 Read these split scores as development progress, not as generalization — the section below explains why.</p>
 
 
@@ -474,20 +476,26 @@ A held-out split stops being held out the moment someone debugs against it. Ours
 after a parser rewrite the held-out exact-triple score read <b>98%</b>, which
 measures how thoroughly those specific sentences were fixed, not how well the parser
 generalizes. So we keep a second set, <span class="mono">evals/blind_probe.json</span>, that
-is never used for tuning — if a case in it ever informs a fix, that case is retired and replaced.
+is never used for tuning — and the rule has teeth: the moment a probe's failures are studied
+to inform fixes, the whole probe is marked <span class="mono">burned</span>, the runner refuses
+to score it again, and a fresh probe is authored. That fired once already — probe&nbsp;v1 is
+archived as <span class="mono">blind_probe_v1_burned.json</span> with its post-study re-score
+explicitly disowned; the numbers below are probe
+v2's single-shot measurement
+(2026-08-30).
 </p>
 <table>
 <tr><th>Metric (20 unseen cases)</th><th>Rules parser</th><th>LLM · Groq</th><th>What it means</th></tr>
-<tr><td>Zone extraction (exact set)</td><td class="hl"><b>95%</b></td><td><b>95%</b></td><td>Naming the right room is close to solved, including multi-zone and Hinglish.</td></tr>
-<tr><td>Complaint detection</td><td><b>85%</b></td><td><b>70%</b></td><td>Deciding <i>whether</i> a message is a complaint at all is the weak axis.</td></tr>
-<tr><td>Issue extraction</td><td><b>90%</b></td><td><b>75%</b></td><td>Novel metaphors and inverted sarcasm still land on the wrong issue.</td></tr>
-<tr><td><b>Exact triple</b></td><td><b>80%</b></td><td><b>60%</b></td><td>All three correct. This is the number to quote, not the tuned split's.</td></tr>
+<tr><td>Zone extraction (exact set)</td><td class="hl"><b>90%</b></td><td><b>90%</b></td><td>Naming the right room is close to solved, including multi-zone and Hinglish.</td></tr>
+<tr><td>Complaint detection</td><td><b>60%</b></td><td><b>70%</b></td><td>Deciding <i>whether</i> a message is a complaint at all is the weak axis.</td></tr>
+<tr><td>Issue extraction</td><td><b>65%</b></td><td><b>75%</b></td><td>Novel metaphors and inverted sarcasm still land on the wrong issue.</td></tr>
+<tr><td><b>Exact triple</b></td><td><b>45%</b></td><td><b>55%</b></td><td>All three correct. This is the number to quote, not the tuned split's.</td></tr>
 </table>
 <p class="figcap">Categories still failing on unseen input:
-ambiguous-needs-clarify, appliance-negative, contrast-two-clauses, sarcasm-inverted.</p>
+ambiguous-needs-clarify, contrast-two-clauses, drafty, hinglish-implied-heat, indirect-cold, metaphor-humid, multi-zone, outdoor-negative, sarcasm-inverted, tamil-english, tamil-english-stuffy.</p>
 <div class="callout">
 <b>Why publish the lower number?</b> Because the difference between the tuned split's
-98% and the probe's 80% <i>is</i> the finding. It quantifies how much
+98% and the probe's 45% <i>is</i> the finding. It quantifies how much
 of a held-out score survives contact with genuinely new phrasing, and it is the only NLP
 number this report quotes as generalization.
 </div>
@@ -495,13 +503,15 @@ number this report quotes as generalization.
 
 <h3>What still fails (blind-probe cases, quoted as measured)</h3>
 <ul>
-  <li><i>"whoever runs the cafeteria AC hates warm-blooded people"</i> — <span class="mono">sarcasm-inverted</span>; missed det, issue.</li>
-  <li><i>"the microwave in the pantry is red hot"</i> — <span class="mono">appliance-negative</span>; missed zoneset.</li>
-  <li><i>"could someone look at the temperature situation"</i> — <span class="mono">ambiguous-needs-clarify</span>; missed det.</li>
-  <li><i>"printer room is fine but the open office is unbearable"</i> — <span class="mono">contrast-two-clauses</span>; missed det, issue.</li>
+  <li><i>"lost feeling in my hands sitting in the boardroom again"</i> — <span class="mono">indirect-cold</span>; missed det, issue.</li>
+  <li><i>"guess the lobby thermostat is sponsored by the penguin exhibit"</i> — <span class="mono">sarcasm-inverted</span>; missed det, issue.</li>
+  <li><i>"open office has full-on greenhouse vibes, my glasses keep fogging up"</i> — <span class="mono">metaphor-humid</span>; missed det, issue.</li>
+  <li><i>"cabin ka AC sirf naam ka hai aaj"</i> — <span class="mono">hinglish-implied-heat</span>; missed det, issue.</li>
+  <li><i>"board room la udambu nadungudhu"</i> — <span class="mono">tamil-english</span>; missed det, issue.</li>
+  <li><i>"chennai roads are melting out there, stay safe commuting"</i> — <span class="mono">outdoor-negative</span>; missed det.</li>
 </ul>
 <div class="callout">
-<b>The rules path is not just insurance.</b> On 20 unseen cases the staged rules parser scores 80% exact triple against the hosted LLM's 60%, leading on 3 of 4 axes and trailing on 0. The runtime still prefers the LLM whenever an API key is present (rules are the no-key, no-Wi-Fi path), so this result is a live argument against that default rather than a description of it: on unseen phrasing the component we wrote generalizes better than the model we called, and the probe is what makes that visible instead of assumed.
+<b>The LLM path is the product, the rules are the insurance.</b> On 20 unseen cases the LLM scores 55% exact triple against the rules parser's 45%: the keyword ceiling on unseen phrasing is structural, while the LLM path improves with model quality at zero code change. The rules parser keeps the demo alive offline, and at 90% zone accuracy it does that well.
 </div>
 </section>
 
@@ -575,7 +585,7 @@ wherever we show it.</p>
   <li><b>"In simulation."</b> The zero-violation result holds because HVAC sizing is
       adequate in the model. Real buildings have undersized units and thermal surprises;
       the claim on stage is always "in simulation".</li>
-  <li><b>Parser ceiling on unseen phrasing.</b> 80% exact-triple on the 20-case blind probe (§8); complaint detection (85%) fails before zone extraction (95%) does. Benchmarked and shown, not estimated.</li>
+  <li><b>Parser ceiling on unseen phrasing.</b> 45% exact-triple on the 20-case blind probe (§8); complaint detection (60%) fails before zone extraction (90%) does. Benchmarked and shown, not estimated.</li>
   <li><b>Multi-zone complaints.</b> A message naming two rooms still ends up as a
       single-zone constraint downstream; disclosed rather than worked around.</li>
   <li><b>RL not yet shipping.</b> The PPO agent trades 2 viol-min for 2.8 kWh/day; below

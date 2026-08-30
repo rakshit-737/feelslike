@@ -17,11 +17,13 @@ digital twin, and cuts energy while complaints go down.
 The story: the reactive thermostat saves slightly more but breaks comfort.
 FeelsLike saves ~27% **with zero violations** — energy without sacrifice.
 
-NLP benchmark (50 cases, `python -m evals.run_nlp_eval --rules`): offline rules
-parser scores **30/30 on the dev set** and **11/20 (55% exact triple) on the
-held-out set** it was never tuned on — that gap is *why* the LLM parser is the
-product and the rules are the demo-day insurance. Run with an API key to get
-the LLM's held-out score for the honest comparison table.
+NLP benchmark (70 cases, `python -m evals.run_nlp_eval --rules`) scores **30/30
+on the dev set** — but tuned splits flatter, so the number we quote is the
+**rotating blind probe** (`python -m evals.run_blind_probe`): 20 cases never used
+for development, re-authored the moment one is studied. Probe v2 (single-shot,
+2026-08-30): **exact triple 45% rules / 55% LLM, zone set 90%/90% with zero
+invented zones** — that gap is *why* the LLM parser is the product and the rules
+are the demo-day insurance, and the clarify-don't-guess path is why 45% is safe.
 
 ## Quickstart (Windows / VS Code)
 
@@ -47,9 +49,9 @@ macOS/Linux: `python3 -m venv .venv && source .venv/bin/activate` — everything
 Optional LLM parser: copy `.env.example` → `.env`, add `ANTHROPIC_API_KEY` (or
 `OPENAI_API_KEY`), and `pip install python-dotenv`; run uvicorn with the venv
 activated and the key exported. **Free option:** any OpenAI-compatible provider
-works via `LLM_BASE_URL` — Groq's free tier (Llama 3.3 70B, sub-second) or
-Google AI Studio (Gemini 2.5 Flash) cost nothing; see `.env.example` for the
-exact three lines. **No key needed** — the offline rules parser keeps the whole
+works via `LLM_BASE_URL` — Groq's free tier (gpt-oss-120b, ~2 s; their Llama 3.3
+70B was decommissioned) or Google AI Studio (Gemini 2.5 Flash) cost nothing; see
+`.env.example` for the exact three lines. **No key needed** — the offline rules parser keeps the whole
 demo functional (that's your demo-day insurance).
 
 ## What's where
@@ -67,8 +69,29 @@ demo functional (that's your demo-day insurance).
 | `evals/` | 30-case NLP benchmark + scorer (grow this to 50) |
 | `rl/train.py`, `rl/evaluate.py` | PPO training + ablation table (start training EARLY) |
 | `scripts/demo_day.py` | 7-day controller comparison → results JSON |
+| `backend/hardware.py` + `hardware/` | Hardware-in-the-loop bridge, ESP32 firmware, wiring + safety + hardware-day runbook |
+| `docs/FEASIBILITY.md` | Priced BOM, deployment paths, payback + sensitivity, limitations register |
+| `scripts/mock_node.py` · `run_calibration.py` · `preflight.py` | Software ESP32 rehearsal · one-command calibration · pre-demo checklist |
 
-## Status (updated 2026-08-14)
+## Status (updated 2026-08-30 — finals phase)
+
+Suite: **484 passed, 0 xfailed** (contract + nlp + constraints + thermal + controller +
+simulator + api + hardware + calibration + tariff). Frozen headline numbers exact.
+`python -m scripts.preflight` runs the whole pre-demo checklist in one command.
+
+7. ✅ **Hardware-in-the-loop seam is real:** `backend/hardware.py` + `/api/hw/*` + ESP32
+   firmware (`hardware/`) — one physical zone (Conference Room B) mirrors its vent
+   command to a real fan through the same adapter conformance gate as the simulation.
+   Rig awaits parts; `python -m scripts.mock_node` rehearses the whole loop in software,
+   and `python -m scripts.run_calibration` is the one-command hardware-day calibration
+   (fit R/C to a logged step response; proven on synthetic truth and under the heater
+   duty cap).
+8. ✅ **Feasibility pack:** `docs/FEASIBILITY.md` — researched BOM, two deployment paths,
+   payback under the verified TANGEDCO ToD tariff, limitations register.
+9. ✅ **Blind probe v2** (rotating; v1 burned when studied): the only NLP numbers quoted.
+10. See `STATUS.md` for the full verification ledger and decisions log.
+
+### Earlier milestones (hackathon round 1, 2026-08-14)
 
 1. ✅ **RL track:** PPO trained 2M steps. Ablation (10 random days):
    PPO 81.6 kWh / 2 viol-min vs rules 84.4 kWh / **0** viol-min; 7-day run:

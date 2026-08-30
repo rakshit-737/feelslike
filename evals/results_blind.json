@@ -1,22 +1,24 @@
 {
   "n": 20,
+  "probe_version": 2,
+  "probe_authored": "2026-08-30",
   "mode": "rules (offline)",
   "tally": {
-    "det": 17,
-    "zoneset": 19,
-    "issue": 18,
-    "triple": 16
+    "det": 12,
+    "zoneset": 18,
+    "issue": 13,
+    "triple": 9
   },
   "pct": {
-    "det": 85,
-    "zoneset": 95,
-    "issue": 90,
-    "triple": 80
+    "det": 60,
+    "zoneset": 90,
+    "issue": 65,
+    "triple": 45
   },
   "by_category": {
     "indirect-cold": {
       "n": 1,
-      "triple": 1
+      "triple": 0
     },
     "sarcasm-inverted": {
       "n": 1,
@@ -24,15 +26,15 @@
     },
     "metaphor-humid": {
       "n": 1,
-      "triple": 1
+      "triple": 0
     },
     "hinglish-implied-heat": {
       "n": 1,
-      "triple": 1
+      "triple": 0
     },
     "tamil-english": {
       "n": 1,
-      "triple": 1
+      "triple": 0
     },
     "multi-zone-hinglish": {
       "n": 1,
@@ -44,11 +46,11 @@
     },
     "appliance-negative": {
       "n": 2,
-      "triple": 1
+      "triple": 2
     },
     "outdoor-negative": {
       "n": 1,
-      "triple": 1
+      "triple": 0
     },
     "retraction": {
       "n": 1,
@@ -60,7 +62,7 @@
     },
     "drafty": {
       "n": 1,
-      "triple": 1
+      "triple": 0
     },
     "ambiguous-needs-clarify": {
       "n": 1,
@@ -68,7 +70,7 @@
     },
     "multi-zone": {
       "n": 1,
-      "triple": 1
+      "triple": 0
     },
     "unknown-zone": {
       "n": 1,
@@ -80,7 +82,7 @@
     },
     "tamil-english-stuffy": {
       "n": 1,
-      "triple": 1
+      "triple": 0
     },
     "sarcasm-heat": {
       "n": 1,
@@ -93,19 +95,19 @@
   },
   "failures": [
     {
-      "text": "whoever runs the cafeteria AC hates warm-blooded people",
-      "category": "sarcasm-inverted",
+      "text": "lost feeling in my hands sitting in the boardroom again",
+      "category": "indirect-cold",
       "gold": {
         "is_comfort_complaint": true,
         "zone_ids": [
-          "zone_e"
+          "zone_b"
         ],
         "issue": "too_cold"
       },
       "got": {
         "is_comfort_complaint": false,
         "zone_ids": [
-          "zone_e"
+          "zone_b"
         ],
         "issue": "other"
       },
@@ -116,27 +118,139 @@
       "source": "rules"
     },
     {
-      "text": "the microwave in the pantry is red hot",
-      "category": "appliance-negative",
+      "text": "guess the lobby thermostat is sponsored by the penguin exhibit",
+      "category": "sarcasm-inverted",
+      "gold": {
+        "is_comfort_complaint": true,
+        "zone_ids": [
+          "zone_d"
+        ],
+        "issue": "too_cold"
+      },
+      "got": {
+        "is_comfort_complaint": false,
+        "zone_ids": [
+          "zone_d"
+        ],
+        "issue": "other"
+      },
+      "missed": [
+        "det",
+        "issue"
+      ],
+      "source": "rules"
+    },
+    {
+      "text": "open office has full-on greenhouse vibes, my glasses keep fogging up",
+      "category": "metaphor-humid",
+      "gold": {
+        "is_comfort_complaint": true,
+        "zone_ids": [
+          "zone_a"
+        ],
+        "issue": "humid"
+      },
+      "got": {
+        "is_comfort_complaint": false,
+        "zone_ids": [
+          "zone_a"
+        ],
+        "issue": "other"
+      },
+      "missed": [
+        "det",
+        "issue"
+      ],
+      "source": "rules"
+    },
+    {
+      "text": "cabin ka AC sirf naam ka hai aaj",
+      "category": "hinglish-implied-heat",
+      "gold": {
+        "is_comfort_complaint": true,
+        "zone_ids": [
+          "zone_c"
+        ],
+        "issue": "too_hot"
+      },
+      "got": {
+        "is_comfort_complaint": false,
+        "zone_ids": [
+          "zone_c"
+        ],
+        "issue": "other"
+      },
+      "missed": [
+        "det",
+        "issue"
+      ],
+      "source": "rules"
+    },
+    {
+      "text": "board room la udambu nadungudhu",
+      "category": "tamil-english",
+      "gold": {
+        "is_comfort_complaint": true,
+        "zone_ids": [
+          "zone_b"
+        ],
+        "issue": "too_cold"
+      },
+      "got": {
+        "is_comfort_complaint": false,
+        "zone_ids": [
+          "zone_b"
+        ],
+        "issue": "other"
+      },
+      "missed": [
+        "det",
+        "issue"
+      ],
+      "source": "rules"
+    },
+    {
+      "text": "chennai roads are melting out there, stay safe commuting",
+      "category": "outdoor-negative",
       "gold": {
         "is_comfort_complaint": false,
         "zone_ids": [],
         "issue": "other"
       },
       "got": {
-        "is_comfort_complaint": false,
-        "zone_ids": [
-          "zone_e"
-        ],
-        "issue": "other"
+        "is_comfort_complaint": true,
+        "zone_ids": [],
+        "issue": "too_hot"
       },
       "missed": [
-        "zoneset"
+        "det"
       ],
       "source": "rules"
     },
     {
-      "text": "could someone look at the temperature situation",
+      "text": "there's a constant breeze hitting the back of my chair in the open office",
+      "category": "drafty",
+      "gold": {
+        "is_comfort_complaint": true,
+        "zone_ids": [
+          "zone_a"
+        ],
+        "issue": "drafty"
+      },
+      "got": {
+        "is_comfort_complaint": true,
+        "zone_ids": [
+          "zone_a"
+        ],
+        "issue": "too_cold"
+      },
+      "missed": [
+        "issue"
+      ],
+      "source": "rules"
+    },
+    {
+      "text": "can facilities do something about the climate in this building",
       "category": "ambiguous-needs-clarify",
       "gold": {
         "is_comfort_complaint": true,
@@ -154,14 +268,39 @@
       "source": "rules"
     },
     {
-      "text": "printer room is fine but the open office is unbearable",
-      "category": "contrast-two-clauses",
+      "text": "both the lobby and the conference room could double as saunas",
+      "category": "multi-zone",
+      "gold": {
+        "is_comfort_complaint": true,
+        "zone_ids": [
+          "zone_d",
+          "zone_b"
+        ],
+        "issue": "too_hot"
+      },
+      "got": {
+        "is_comfort_complaint": true,
+        "zone_ids": [
+          "zone_d",
+          "zone_b",
+          "zone_c"
+        ],
+        "issue": "too_hot"
+      },
+      "missed": [
+        "zoneset"
+      ],
+      "source": "rules"
+    },
+    {
+      "text": "open office la moochu vida mudiyala, konjam kaathu vidunga",
+      "category": "tamil-english-stuffy",
       "gold": {
         "is_comfort_complaint": true,
         "zone_ids": [
           "zone_a"
         ],
-        "issue": "too_hot"
+        "issue": "stuffy"
       },
       "got": {
         "is_comfort_complaint": false,
@@ -173,6 +312,29 @@
       "missed": [
         "det",
         "issue"
+      ],
+      "source": "rules"
+    },
+    {
+      "text": "the cafeteria is comfy now but the reception is still an oven",
+      "category": "contrast-two-clauses",
+      "gold": {
+        "is_comfort_complaint": true,
+        "zone_ids": [
+          "zone_d"
+        ],
+        "issue": "too_hot"
+      },
+      "got": {
+        "is_comfort_complaint": true,
+        "zone_ids": [
+          "zone_e",
+          "zone_d"
+        ],
+        "issue": "too_hot"
+      },
+      "missed": [
+        "zoneset"
       ],
       "source": "rules"
     }

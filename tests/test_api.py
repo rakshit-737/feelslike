@@ -200,7 +200,8 @@ def test_an_all_clear_clears_exactly_the_zones_it_names(fresh_client):
 
     body = fresh_client.post("/api/complaint",
                              json={"text": "all good in the lobby and cafeteria now"}).json()
-    assert body["action"].startswith("all-clear")     # see the xfail on the action vocabulary
+    assert body["action"] == "cleared"
+    assert body["action_text"].startswith("all-clear"), "the human sentence rides along"
     assert body["cleared"] == 2
     assert body["cleared_by_zone"] == {"zone_d": 1, "zone_e": 1}
 
@@ -215,7 +216,7 @@ def test_a_negated_all_clear_also_clears(fresh_client):
     fresh_client.post("/api/complaint", json={"text": "reception is really stuffy"})
     assert len(fresh_client.get("/api/constraints").json()["active"]) == 1
     body = fresh_client.post("/api/complaint", json={"text": "no longer stuffy in reception"}).json()
-    assert body["action"].startswith("all-clear") and body["cleared"] == 1
+    assert body["action"] == "cleared" and body["cleared"] == 1
     assert fresh_client.get("/api/constraints").json()["active"] == []
 
 
@@ -229,8 +230,8 @@ def test_a_non_comfort_message_is_ignored_and_changes_nothing(fresh_client):
 
 def test_an_unaddressable_complaint_asks_which_zone(fresh_client):
     body = fresh_client.post("/api/complaint", json={"text": "it's hot in narnia"}).json()
-    assert body["action"].startswith("clarify")
-    assert "Conference Room B" in body["action"], "the clarify prompt must list the zones"
+    assert body["action"] == "clarify"
+    assert "Conference Room B" in body["action_text"], "the clarify prompt must list the zones"
     assert fresh_client.get("/api/constraints").json()["active"] == [], \
         "a complaint with no zone still created a constraint somewhere"
 
@@ -240,21 +241,10 @@ def test_an_outdoor_statement_is_ignored(fresh_client):
     assert body["action"].startswith("ignored")
 
 
-@pytest.mark.defect
-@pytest.mark.xfail(strict=True, reason=(
-    "DEFECT: POST /api/complaint's docstring pins the output as \"action is one of "
-    "applied / cleared / ignored / clarify / noted\", but four of those five never "
-    "reach the client. Every return in LiveSim.handle_complaint is built as "
-    "`{\"ok\": True, \"action\": \"<code>\", **entry}` and `entry` already carries "
-    "its own long-form `action` (\"all-clear - 2 constraint(s) cleared in Lobby D, "
-    "Cafeteria E\"), so the ** expansion SHADOWS the short code that comes before "
-    "it. Only \"applied\" survives, because there the two spellings happen to be "
-    "identical. Consequence: any client written against the documented vocabulary "
-    "silently never matches - and one already works around it, "
-    "app.slack_command does `action.startswith(\"all-clear\")` with the comment "
-    "'# long form'. Fix: either put \"action\" AFTER the ** expansion, or give the "
-    "feed entry a separate key (e.g. entry[\"action_text\"]) so the machine-readable "
-    "code and the human sentence stop competing for one name."))
+# FIXED (was xfail): the response's `action` is now the machine-readable code,
+# set AFTER the ** expansion so the feed entry's human sentence cannot shadow
+# it; that sentence reaches the client as `action_text`, and the FEED entry
+# keeps the long form because the dashboard badge reads it.
 @pytest.mark.parametrize("text,expected", [
     ("the projector in room b is broken", "ignored"),
     ("it's hot in narnia", "clarify"),
@@ -264,16 +254,16 @@ def test_an_outdoor_statement_is_ignored(fresh_client):
 def test_the_complaint_action_vocabulary_matches_its_docstring(fresh_client, text, expected):
     body = fresh_client.post("/api/complaint", json={"text": text}).json()
     assert body["action"] == expected, f"{text!r} -> {body['action']!r}"
+    assert body["action_text"], "the human sentence must still reach the client"
 
 
-def test_the_one_action_code_that_does_survive_is_applied(fresh_client):
-    """"applied" is the single member of the documented vocabulary that reaches the
-    client, because there the short code and the feed's human sentence are the same
-    string. It is also the one the live dashboard branches on, which is why the
-    shadowing bug above has gone unnoticed."""
+def test_the_action_code_and_the_human_sentence_both_arrive(fresh_client):
     body = fresh_client.post("/api/complaint",
                              json={"text": "It's way too hot in Conference Room B"}).json()
     assert body["action"] == "applied"
+    assert body["action_text"] == "applied"
+    feed = fresh_client.get("/api/state").json()["feed"][0]
+    assert feed["action"] == "applied", "the feed entry's action key is the frozen long form"
 
 
 def test_empty_and_missing_text_are_rejected(fresh_client):
@@ -487,20 +477,9 @@ def test_a_pending_constraint_is_listed_and_moves_nothing(fresh_client, pending_
         "the withheld complaint vanished from the zone row entirely"
 
 
-@pytest.mark.defect
-@pytest.mark.xfail(strict=True, reason=(
-    "DEFECT: /api/state -> zones[].pending_constraints reads 0 in exactly the case "
-    "the field exists for. app.zone_rows() derives it from "
-    "ConstraintStore.zone_adjustments(), which documents that it OMITS a zone whose "
-    "constraints are all pending ('exactly as if nothing had been filed'), so "
-    "`adj` is None and the row falls back to the literal 0. The count only appears "
-    "when the zone ALSO has an approved constraint to be weighted alongside. So in "
-    "human_approval mode, a zone with one complaint waiting shows 'pending 0' on "
-    "the very panel an operator is meant to act from. GET /api/constraints reports "
-    "it correctly (stats.pending and the pending[] list), and "
-    "ConstraintStore.explain() computes it independently of zone_adjustments, so "
-    "the fix is to read the count from explain(zone, t)['pending'] (or count "
-    "pending_approvals per zone) rather than from the arbitration result."))
+# FIXED (was xfail): zone_rows() now counts pending constraints directly from
+# the store instead of via zone_adjustments(), which omits a zone whose
+# constraints are ALL pending — exactly the case the field exists for.
 def test_a_zone_whose_only_complaint_is_pending_still_reports_the_count(
         fresh_client, pending_constraint):
     zones = {z["id"]: z for z in fresh_client.get("/api/state").json()["zones"]}
