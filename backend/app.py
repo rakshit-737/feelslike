@@ -49,8 +49,9 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 
-from backend import parser, privacy, tariff, whatif
+from backend import parser, privacy, tariff, telemetry, whatif
 from backend.analytics import AnalyticsStore
+from backend.external import Dataset, ExternalFeed
 from backend.constraints import ConstraintStore
 from backend.contracts import OBJECTIVES, SAFETY_MODES, to_dict
 from backend.decisions import DecisionLog
@@ -119,7 +120,13 @@ class LiveSim:
         self.hw_bridge = HardwareBridge()
         self.hw_sensor = HttpSensorAdapter(self.hw_bridge)
         self.hw_hvac = HttpHVACAdapter(self.hw_bridge)
+        # External REAL feed (Open-Meteo) + HISTORICAL dataset (backend.external).
+        # Wall-clock, read-only, never fed to the physics; survive a reset like
+        # the rig does. FL_EXTERNAL=0 disables the network thread entirely.
+        self.external = ExternalFeed()
+        self.dataset = Dataset()
         self._build()
+        self.external.start()
         threading.Thread(target=self._loop, daemon=True).start()
 
     # ---------------------------------------------------------------- build
@@ -147,6 +154,7 @@ class LiveSim:
         self.decisions = DecisionLog(maxlen=DECISION_LOG_MAX)
         self.monitor = MaintenanceMonitor()
         self.analytics = AnalyticsStore(sample_min=SAMPLE_INTERVAL_S / 60.0)
+        self.telemetry = telemetry.TelemetryStore()   # step-cadence, Monitor tab
         self.retention = privacy.RetentionPolicy(self.privacy_cfg.retention_hours)
         self.operator_locks: set = set()        # zones an operator froze
         self.auto_locks: set = set()            # zones a capacity alert froze
@@ -205,6 +213,7 @@ class LiveSim:
         self._measure_zone_power(kwh_before, vents)
 
         self._safe("decisions", self._tick_decisions)
+        self._safe("telemetry", self._tick_telemetry)
         self._safe("memory", self._tick_memory)
         self._safe("hardware", self._tick_hardware)
         if self.us.t >= self._next_maint:
@@ -237,6 +246,15 @@ class LiveSim:
     def _tick_decisions(self) -> None:
         for d in self.ctrl_us.last_decisions:
             self.decisions.record(d)
+
+    def _tick_telemetry(self) -> None:
+        """One step-cadence row for the Monitor tab (backend.telemetry).
+        Read-only observer of both twins; the constraint count per zone comes
+        from the store so a chart can mark when a complaint was driving control."""
+        t = self.us.t
+        active = {z.id: len(self.store.active(t, z.id)) for z in ZONES}
+        self.telemetry.record(self.us, self.base, self.zone_power_w,
+                              self.zone_cool_w, active)
 
     def _tick_memory(self) -> None:
         for note in self.memory.tick(self.us, self.store):
@@ -655,6 +673,12 @@ class LiveSim:
                 "analytics": {"summary": self.analytics.summary(feed, alerts)},
                 "privacy": self.privacy_state(),
                 "hardware": self.hw_bridge.status(),
+                # additive: Monitor-tab summary (full data at /api/monitor,
+                # /api/telemetry, /api/external, /api/dataset, /api/forecast)
+                "monitor": {"rows": len(self.telemetry),
+                            "alerts": len(self.telemetry.alerts()),
+                            "external_available": bool(self.external.snapshot(0, 0)["available"]),
+                            "dataset_available": self.dataset.available},
                 "constraint_stats": self.store.stats(self.us.t),
                 "health": {"errors": [dict(v) for v in self.errors.values()],
                            "steps": self.steps,
@@ -1254,6 +1278,150 @@ def hw_log(limit: int = 4096):
         raise HTTPException(400, f"limit must be between 1 and {READING_LOG_MAX}")
     rows = sim.hw_bridge.log_rows(limit)
     return {"zone": HW_ZONE, "rows": rows, "count": len(rows)}
+
+
+# ==========================================================================
+# monitoring (Monitor tab): step-cadence telemetry, KPIs, alerts, forecast,
+# the real external feed and the historical dataset — see backend/telemetry.py
+# and backend/external.py for the provenance rules every payload carries.
+# ==========================================================================
+
+MONITOR_ZONES = ["all"] + [z.id for z in ZONES]
+
+
+def _check_zone(zone: str) -> str:
+    if zone not in MONITOR_ZONES:
+        raise HTTPException(400, f"unknown zone {zone!r}; expected one of {MONITOR_ZONES}")
+    return zone
+
+
+@app.get("/api/telemetry")
+def get_telemetry(zone: str = "all", window: str = "24h",
+                  t_from: float | None = None, t_to: float | None = None,
+                  max_points: int = telemetry.DEFAULT_MAX_POINTS):
+    """Step-cadence series for one zone (or the whole building) over a window.
+
+    INPUT: ?zone=all|zone_a..e, ?window=live|1h|6h|24h|7d|custom (custom takes
+      t_from / t_to in sim seconds), ?max_points=2..2000 (bucket-averaged).
+    OUTPUT: {"zone","window","t_from","t_to","step_s","points":[...],
+      "count_raw","fields": {field: "sim"|"derived"}, "source": "sim"} — every
+      field's provenance travels with the data. co2 and comfort are DERIVED
+      (documented formulas in backend/telemetry.py), never sensor readings.
+    SIDE EFFECTS: none. ERROR STATES: 400 for an unknown zone/window or a
+      max_points outside 2..2000.
+    """
+    _check_zone(zone)
+    if window not in telemetry.WINDOWS and window != "custom":
+        raise HTTPException(400, f"unknown window {window!r}; expected one of "
+                                 f"{sorted(telemetry.WINDOWS) + ['custom']}")
+    if not 2 <= max_points <= 2000:
+        raise HTTPException(400, "max_points must be between 2 and 2000")
+    with sim.lock:
+        out = sim.telemetry.series(zone, window, t_from, t_to, max_points)
+    out["source"] = "sim"
+    out["co2_estimated"] = True
+    return out
+
+
+@app.get("/api/monitor")
+def get_monitor(zone: str = "all"):
+    """One call for the Monitor tab's KPI strip: current vs previous values,
+    status per metric, threshold table, active threshold alerts, the rig's
+    latest real reading and the external feed's current values.
+
+    INPUT: ?zone=all|zone_id.
+    OUTPUT: {"kpis": telemetry.kpis(), "alerts": [...], "thresholds": {...},
+      "hardware": {...real rig reading or connected=false...},
+      "external": {...current outdoor real values or available=false...},
+      "sources": legend text per source tag, "sim_clock", "sim_t"}.
+    SIDE EFFECTS: none. ERROR STATES: 400 for an unknown zone.
+    """
+    _check_zone(zone)
+    with sim.lock:
+        kpis = sim.telemetry.kpis(zone)
+        alerts = sim.telemetry.alerts(zone)
+        clock, t = sim.clock(), sim.us.t
+        hw = sim.hw_bridge.status()
+    hw["sensor_health"] = sim.hw_sensor.health(HW_ZONE)
+    ext = sim.external.snapshot(0, 0)
+    return {
+        "zone": zone, "sim_clock": clock, "sim_t": t,
+        "kpis": kpis, "alerts": alerts, "thresholds": telemetry.THRESHOLDS,
+        "hardware": hw,
+        "external": {k: ext[k] for k in ("available", "provider", "site", "current",
+                                          "fetched_at", "age_s", "error", "attribution")},
+        "sources": {
+            "sim": "Digital twin state (sim/twin.py) — simulated building, seeded weather",
+            "derived": "Computed from twin state by a documented formula (backend/telemetry.py)",
+            "hardware": "ESP32 shoebox rig, real sensor over HTTP (backend/hardware.py) — one zone",
+            "real": "Open-Meteo live outdoor weather / air quality for the site (backend/external.py)",
+            "historical": "UCI Occupancy Detection dataset replay (data/uci_occupancy.csv)",
+            "predicted": "Same controller run forward on clones (backend/telemetry.forecast)",
+        },
+    }
+
+
+@app.get("/api/forecast")
+def get_forecast(zone: str = "all", horizon_h: float = 3.0, max_points: int = 90):
+    """PREDICTED series: the live building stepped forward on throwaway clones.
+
+    INPUT: ?zone=all|zone_id, ?horizon_h in (0, 24], ?max_points 2..500.
+    OUTPUT: {"kind":"predicted","horizon_h","zone","t_from","t_to","points",
+      "note"} — kwh is the delta over the horizon. Runs the same ConstraintAware
+      controller (same objective) with the live constraint store cloned.
+    SIDE EFFECTS: none on live state. ERROR STATES: 400 for bad arguments.
+    """
+    _check_zone(zone)
+    if not 0.0 < horizon_h <= 24.0:
+        raise HTTPException(400, "horizon_h must be > 0 and <= 24")
+    if not 2 <= max_points <= 500:
+        raise HTTPException(400, "max_points must be between 2 and 500")
+    with sim.lock:
+        twin, store = sim.us.clone(), sim.store.clone()
+        objective, co2 = sim.objective, dict(sim.telemetry.co2)
+    return telemetry.forecast(twin, store, lambda: ConstraintAware(objective=objective),
+                              horizon_h, zone, max_points, co2_init=co2)
+
+
+@app.get("/api/external")
+def get_external(hours_past: float = 168.0, hours_ahead: float = 24.0):
+    """The REAL outdoor feed (Open-Meteo) for the configured site.
+
+    INPUT: ?hours_past (default 168 = 7 d), ?hours_ahead (default 24).
+    OUTPUT: backend.external.ExternalFeed.snapshot() — available=false with the
+      reason in "error" when offline or disabled; never a 500.
+    SIDE EFFECTS: none (the refresher runs on its own thread).
+    """
+    return sim.external.snapshot(max(0.0, hours_past), max(0.0, hours_ahead))
+
+
+@app.post("/api/external/refresh")
+def refresh_external():
+    """Force one synchronous fetch (a few seconds). OUTPUT: the new snapshot."""
+    ok = sim.external.refresh()
+    out = sim.external.snapshot(0, 0)
+    out["refreshed"] = ok
+    return out
+
+
+@app.get("/api/dataset")
+def get_dataset(window: str = "24h", end: str | None = None,
+                start: str | None = None, max_points: int = 360):
+    """HISTORICAL dataset replay (UCI occupancy, data/uci_occupancy.csv).
+
+    INPUT: ?window=live|1h|6h|24h|7d|custom, ?end / ?start ISO timestamps
+      ("2015-02-10 09:00:00"), ?max_points 2..2000.
+    OUTPUT: {"info": dataset provenance, "points": [...], ...}.
+    SIDE EFFECTS: none. ERROR STATES: 400 for bad arguments.
+    """
+    from backend.external import DATASET_WINDOWS
+    if window not in DATASET_WINDOWS and window != "custom":
+        raise HTTPException(400, f"unknown window {window!r}")
+    if not 2 <= max_points <= 2000:
+        raise HTTPException(400, "max_points must be between 2 and 2000")
+    out = sim.dataset.window(window, end, start, max_points)
+    out["info"] = sim.dataset.info()
+    return out
 
 
 # ==========================================================================

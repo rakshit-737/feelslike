@@ -19,10 +19,13 @@ Prices intentionally omitted here; they belong in `docs/FEASIBILITY.md`.
 |-----|------|-------|
 | 1 | ESP32 dev board | Any "ESP32 Dev Module"-compatible board with micro-USB |
 | 1 | DHT22 **or** SHT31 breakout | SHT31 is the better sensor; DHT22 is the cheaper default. Pick one, set the matching `#define` |
-| 2 | Logic-level MOSFET module | e.g. IRLZ44N module or D4184 module; one for fan, one for heater. Must switch fully at 3.3 V gate drive |
-| 1 | 5 V fan, 40 mm | Ventilation actuator |
-| 1 | Heat source | 10 W wirewound power resistor on a small heatsink, or a 12 V filament bulb. Must be rated for continuous operation at the supply voltage |
-| 1 | Physical toggle switch | In series with the actuator 5 V supply line — see safety layer 0 |
+| 1 | **L9110 / L9110S dual H-bridge** *(what this rig uses)* | One module covers both channels: A drives the fan, B the heater. 2.5–12 V supply, 800 mA per channel, ~1.2 V bridge drop. Set `#define DRIVER_L9110` |
+| 2 | — *or* logic-level MOSFET module | e.g. IRLZ44N or D4184; one for fan, one for heater. Must switch fully at 3.3 V gate drive. Set `#define DRIVER_MOSFET` |
+| 1 | DC fan, 40 mm | Ventilation actuator. Match the supply: a 12 V fan needs a 12 V rail — it will not start reliably on 5 V |
+| 1 | Heat source | A single wirewound power resistor sized for ~2.5–3 W at the rail (10 Ω / 10 W on 5 V, 47 Ω / 10 W on 12 V), **or** ~20 ordinary ¼ W resistors in parallel across the rail — see the sizing rule below |
+| 1 | Physical toggle switch | In series with the actuator supply line — see safety layer 0 |
+| 1 | Fuse (0.5–1 A) | In the same supply line, ahead of the switch. Cheap insurance against a shorted heater |
+| 2 | 2-pin screw terminal block | Lands the supply and the heater leads properly instead of trusting breadboard friction at ½ A |
 | 1 | Breadboard | |
 | — | Jumper wires | Male-male and male-female |
 | 1 | Micro-USB cable | Power + flashing |
@@ -36,26 +39,56 @@ Prices intentionally omitted here; they belong in `docs/FEASIBILITY.md`.
 | GPIO 21 | SHT31 SDA | SHT31 build only (I2C) |
 | GPIO 22 | SHT31 SCL | SHT31 build only (I2C) |
 | 3V3 | Sensor VCC | DHT22 or SHT31 |
-| GPIO 16 | Fan MOSFET module signal/gate input | 25 kHz PWM from firmware |
-| GPIO 17 | Heater MOSFET module signal/gate input | Plain on/off, no PWM |
-| GND | Sensor GND, both MOSFET module GNDs, actuator supply negative | Common ground is mandatory |
+| GPIO 16 | Fan driver input — L9110 **A-IA**, or MOSFET gate | PWM from firmware (10 kHz on L9110, 25 kHz on a MOSFET) |
+| GPIO 17 | Heater driver input — L9110 **B-IA**, or MOSFET gate | Plain on/off, no PWM |
+| GND | Sensor GND, driver GND, **L9110 A-IB and B-IB**, actuator supply negative | Common ground is mandatory |
 
-Actuator power path: 5 V rail (USB or external supply) → **physical toggle switch** →
-fan positive and heater positive. Each load's negative goes to the drain of its MOSFET
-module; the modules switch the low side to ground.
+**Bridge drop matters on a 5 V rail.** The L9110 loses roughly 0.5 V across itself at
+these currents (more at higher current), so a 5 V supply puts about 4.4 V on the load.
+A 5 V fan still starts; the heater delivers ~1.9 W instead of 2.5 W through a 10 Ω
+resistor, which is still a usable step. If the fan is visibly weak at level 2, switch
+that channel with a logic-level MOSFET instead (`#define DRIVER_MOSFET`) or raise the
+rail. A USB-C PD charger does NOT give more than 5 V to plain wires — its 9/12 V modes
+need a PD trigger board to negotiate them.
+
+**L9110 wiring.** Tying `A-IB` and `B-IB` to GND turns each H-bridge channel into a
+plain one-direction switch: `IA` high (or PWM) drives the load, `IA` low stops it. The
+motor supply goes to the module's `VCC`/`+` and the loads to `OA`/`OB`. Nothing in the
+firmware's safety path changes — only the wiring and the PWM frequency differ between
+the two driver options.
+
+Actuator power path: supply rail → **fuse** → **physical toggle switch** → driver module
+`VCC`. Loads connect to the driver outputs, not to the rail directly.
 
 Rules that are not optional:
 
-- Fan and heater draw power from the 5 V rail, **never** from a GPIO. GPIOs drive only
-  the MOSFET gate inputs.
+- Fan and heater draw power from the actuator rail, **never** from a GPIO. GPIOs drive
+  only the driver's logic inputs.
 - ESP32 ground and actuator supply ground must be tied together. Without a common
-  ground the MOSFETs will not switch reliably (or at all).
+  ground the driver will not switch reliably (or at all).
+- Keep total current inside the driver's rating — 800 mA per channel on the L9110. Size
+  the heater accordingly and measure it before trusting it.
 - The heater must be rated for continuous operation at the supply voltage and mounted
   clear of the cardboard walls (heatsink in free air, nothing touching it).
 
+**Heater sizing rule.** Aim for ~2.5–3 W: that moves a shoebox about 3 °C, which is a
+clean step against a DHT22's ±0.5 °C accuracy. Power is V²/R, so on a 5 V rail use
+10 Ω (2.5 W, 0.5 A), on 9 V use 27 Ω (3.0 W, 0.33 A) and on a 12 V rail use 47 Ω
+(3.1 W, 0.26 A) — in every case a wirewound part rated 5 W or more, never an ordinary
+¼ W resistor. The target is not sharp: anything landing between roughly 2 and 4 W is a
+usable step, so on 12 V any value from 39 Ω to 68 Ω will do, which is what shop stock
+tends to look like. If you are building the
+heater from ordinary ¼ W resistors instead, put ~20 in parallel across the rail and keep
+each one under half its rating: 220 Ω each on 5 V (0.11 W each, 2.3 W total), or 1 kΩ
+each on 12 V (0.14 W each, 2.9 W total). Never put a single ¼ W resistor across the rail
+— a lone 10 Ω on 5 V is 2.5 W in a part rated for 0.25 W, and it will burn. Whatever you
+fit, measure the actual V and R and pass the real wattage to
+`scripts/run_calibration.py --power`.
+
 ## The physical off switch (safety layer 0)
 
-A toggle switch sits in series with the actuator 5 V supply line. When it is open,
+A toggle switch sits in series with the actuator supply line (5 V or 12 V, whichever
+the fan needs). When it is open,
 no fan and no heater — regardless of what the firmware, the server, or a wiring
 mistake does. It is a hardware kill that no software state can override. Flip it off
 before touching anything inside the box.
@@ -80,7 +113,9 @@ assumes the firmware runs, layer 0 assumes nothing.
    - **ArduinoJson**
 4. Open `firmware/feelslike_node/feelslike_node.ino`.
 5. Set the three CHANGE-ME defines at the top: `WIFI_SSID`, `WIFI_PASS`, `GATEWAY_URL`.
-   If using an SHT31, also swap the `SENSOR_*` define.
+   Check the two hardware defines match what you actually fitted: `SENSOR_DHT22` /
+   `SENSOR_SHT31`, and `DRIVER_L9110` / `DRIVER_MOSFET`. Each pair is guarded by an
+   `#error`, so getting it wrong fails at compile time rather than on the bench.
 6. Tools → Board → **ESP32 Dev Module**. Select the board's COM port.
 7. Upload. Open Serial Monitor at **115200** baud; you should see boot, WiFi connect,
    sensor readings, and POST results.

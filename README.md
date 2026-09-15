@@ -66,6 +66,8 @@ demo functional (that's your demo-day insurance).
 | `backend/memory.py` | Comfort memory: learns recurring complaint patterns, pre-applies fixes |
 | `backend/app.py` | FastAPI: live sim, complaint API, Slack/Teams webhook, dashboard server |
 | `dashboard/index.html` | Single-file dashboard: floor plan, chat, racing energy chart |
+| `dashboard/monitor.js` + `backend/telemetry.py` + `backend/external.py` | **Monitor tab** (finals): KPI cards, time-filtered charts, zone drill-down, alerts — every value tagged SIM / DERIVED / HARDWARE / REAL / HISTORICAL / PREDICTED |
+| `data/` | Real + historical datasets (UCI occupancy CSV, Open-Meteo live feed) with provenance — `data/README.md` |
 | `evals/` | 30-case NLP benchmark + scorer (grow this to 50) |
 | `rl/train.py`, `rl/evaluate.py` | PPO training + ablation table (start training EARLY) |
 | `scripts/demo_day.py` | 7-day controller comparison → results JSON |

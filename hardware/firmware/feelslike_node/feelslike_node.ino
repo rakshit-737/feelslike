@@ -43,9 +43,11 @@
 // ------------------------------------------------------------------
 // CONFIG — CHANGE-ME section
 // ------------------------------------------------------------------
-#define WIFI_SSID    "CHANGE_ME_SSID"        // <-- your WiFi network name
-#define WIFI_PASS    "CHANGE_ME_PASSWORD"    // <-- your WiFi password
-#define GATEWAY_URL  "http://CHANGE_ME_HOST:8000"  // <-- gateway base URL, no trailing slash
+// Credentials live in secrets.h (git-ignored). Copy secrets.h.example -> secrets.h.
+#include "secrets.h"
+#if !defined(WIFI_SSID) || !defined(WIFI_PASS) || !defined(GATEWAY_URL)
+#error "secrets.h must define WIFI_SSID, WIFI_PASS and GATEWAY_URL"
+#endif
 
 #define NODE_ID      "shoebox-1"
 
@@ -59,15 +61,44 @@
 #define DHT_PIN         4      // DHT22 data (only used with SENSOR_DHT22)
 #define I2C_SDA_PIN     21     // SHT31 SDA  (only used with SENSOR_SHT31)
 #define I2C_SCL_PIN     22     // SHT31 SCL  (only used with SENSOR_SHT31)
-#define FAN_PIN         16     // gate input of fan MOSFET module (PWM)
-#define HEATER_PIN      17     // gate input of heater MOSFET module (on/off)
+#define FAN_PIN         16     // fan driver input (PWM):   MOSFET gate, or L9110 A-IA
+#define HEATER_PIN      17     // heater driver input (on/off): MOSFET gate, or L9110 B-IA
 
 #define POLL_MS_DEFAULT     2000UL   // ms between readings/POSTs (server may override via poll_s)
 #define WATCHDOG_S_DEFAULT  10.0f    // s without a good response before all-off (server may override)
 #define HTTP_TIMEOUT_MS     1500     // keep well under the poll period
 
-// Fan PWM: 25 kHz (above audible range), 8-bit resolution.
+// ------------------------------------------------------------------
+// Actuator driver - define exactly one.
+//   DRIVER_MOSFET : logic-level MOSFET module (D4184 / IRLZ44N). Low-side
+//                   switch; gate straight off FAN_PIN / HEATER_PIN.
+//   DRIVER_L9110  : L9110 / L9110S dual H-bridge module. Wire A-IB and B-IB to
+//                   GND so each channel becomes a plain one-direction switch,
+//                   then FAN_PIN -> A-IA and HEATER_PIN -> B-IA. Supply on VCC
+//                   (2.5-12 V), 800 mA per channel continuous, ~1.2 V drop
+//                   across the bridge (a 12 V fan therefore sees ~10.8 V).
+// The rest of this file is identical either way: only the wiring and the PWM
+// frequency differ, and the safety paths do not care which is fitted.
+// ------------------------------------------------------------------
+#define DRIVER_L9110
+// #define DRIVER_MOSFET
+
+#if defined(DRIVER_L9110) && defined(DRIVER_MOSFET)
+#error "Define exactly one of DRIVER_L9110 / DRIVER_MOSFET"
+#endif
+#if !defined(DRIVER_L9110) && !defined(DRIVER_MOSFET)
+#error "Define exactly one of DRIVER_L9110 / DRIVER_MOSFET"
+#endif
+
+// Fan PWM. A MOSFET gate switches cleanly at 25 kHz, above hearing. The L9110 is
+// a bipolar H-bridge with a much lower practical switching ceiling, so it gets
+// 10 kHz. Verify on the bench: if the driver whines audibly, raise toward
+// 18-20 kHz; if the fan stutters or will not start at level 1, lower it.
+#ifdef DRIVER_MOSFET
 #define FAN_PWM_FREQ_HZ 25000
+#else
+#define FAN_PWM_FREQ_HZ 10000
+#endif
 #define FAN_PWM_BITS    8
 // Fan level -> duty (out of 255): 0 -> 0%, 1 -> 60%, 2 -> 100%.
 static const uint8_t FAN_DUTY[3] = { 0, 153, 255 };

@@ -201,6 +201,7 @@
 <nav id="tabs" role="tablist" aria-label="Dashboard sections">
   <div class="tabrow tabrow-primary" role="presentation">
     <button role="tab" id="tab-overview" data-tab="overview" aria-controls="panel-overview" aria-selected="true" tabindex="0">Overview</button>
+    <button role="tab" id="tab-monitor" data-tab="monitor" aria-controls="panel-monitor" aria-selected="false" tabindex="-1">Monitor</button>
     <button role="tab" id="tab-twin" data-tab="twin" aria-controls="panel-twin" aria-selected="false" tabindex="-1">Live twin</button>
     <button role="tab" id="tab-explain" data-tab="explain" aria-controls="panel-explain" aria-selected="false" tabindex="-1">Explain</button>
     <button role="tab" id="tab-whatif" data-tab="whatif" aria-controls="panel-whatif" aria-selected="false" tabindex="-1">What-if</button>
@@ -296,6 +297,8 @@
 <!-- The other ten panels are mounted by /static/panels.js (agent D2). Each ships a
      one-line honest placeholder so an unmounted tab reads as "loading", never as
      broken; if panels.js never registers, the line says so after 4 s. -->
+<section class="panel" id="panel-monitor" role="tabpanel" aria-labelledby="tab-monitor">
+  <p class="panel-wait">Monitor · loading…</p></section>
 <section class="panel" id="panel-twin" role="tabpanel" aria-labelledby="tab-twin">
   <p class="panel-wait">Live twin · loading…</p></section>
 <section class="panel" id="panel-complaints" role="tabpanel" aria-labelledby="tab-complaints">
@@ -519,7 +522,7 @@ function renderOverview(s){
    to; nothing here knows what any panel contains. Overview is native
    (rendered above) so a missing panels.js costs the pitch nothing.
    ================================================================== */
-const PANELS = ['overview','twin','complaints','control','explain','whatif',
+const PANELS = ['overview','monitor','twin','complaints','control','explain','whatif',
                 'analytics','maintenance','experiments','settings','demo'];
 const reg = new Map();          /* key -> {mount, update, mounted, broken} */
 let activeTab = 'overview';
@@ -686,7 +689,7 @@ setTimeout(()=>{
     if(k==='overview' || reg.has(k)) continue;
     const w=panelEl(k).querySelector('.panel-wait');
     if(w) w.textContent=tabEl(k).textContent+' · panel module not loaded '
-      +'(/static/panels.js). Everything the demo needs is on Overview.';
+      +'(/static/'+(k==='monitor'?'monitor':'panels')+'.js). Everything the demo needs is on Overview.';
   }
 }, 4000);
 
@@ -696,5 +699,8 @@ tick(); setInterval(tick, 1000);
 <!-- After the inline script on purpose: window.FL must exist before any panel
      registers, and a failed load here leaves the Overview console untouched. -->
 <script src="/static/panels.js" defer></script>
+<!-- The Monitor tab lives in its own module so panels.js (single-owner, pinned)
+     stays untouched; it binds to the same FL contract. -->
+<script src="/static/monitor.js" defer></script>
 </body>
 </html>

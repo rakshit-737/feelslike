@@ -44,6 +44,61 @@ Live checklist for the multi-agent upgrade. Updated at every workflow checkpoint
   table). `tests/test_tariff.py` (19 tests). Suite now **483 passed, 0 xfailed**;
   frozen numbers exact. Team browser walk-through of all tabs: done (item 1 confirmed).
 
+**Finals-phase addition (2026-09-15, verified by runs pasted in session): Monitor tab.**
+- `backend/telemetry.py` — step-cadence (60 sim-s) ring buffer, 7 sim-days, read-only observer of
+  both twins (physics bit-identical with/without it: `tests/test_telemetry.py`). Derived signals
+  with documented formulas: CO₂ single-zone mass balance (ASHRAE 62.1 form, uses the twin's own
+  ventilation/infiltration couplings; flagged `co2_estimated`), comfort score 0–100 (heuristic,
+  explicitly NOT PMV), per-zone power/capacity. Threshold table `THRESHOLDS` (ASHRAE 55/62.1,
+  WHO 2021, EN 12464-1) served to the UI, never duplicated client-side. `forecast()` = the same
+  ConstraintAware controller run ahead on clones (what-if isolation rules), labelled `predicted`.
+- `backend/external.py` — REAL outdoor feed (Open-Meteo, CC BY 4.0, no key; site = VIT Chennai,
+  `FL_LAT/FL_LON/FL_SITE`; `FL_EXTERNAL=0` disables) and the HISTORICAL UCI occupancy dataset
+  (`data/uci_occupancy.csv`, 20 560 one-minute rows; `scripts/fetch_datasets.py` rebuilds it).
+  Neither feeds the physics. `data/README.md` records provenance + datasets evaluated but not used.
+- Endpoints (all additive): `GET /api/telemetry`, `/api/monitor`, `/api/forecast`,
+  `/api/external` (+ `POST /api/external/refresh`), `/api/dataset`; `/api/state` gains `monitor`.
+- `dashboard/monitor.js` (own file; `panels.js` untouched) — zone selector, Live/1h/6h/24h/7d/custom
+  windows, 13 KPI cards (current / previous 15 sim-min / Δ% / Normal-Warning-Critical), 9 charts
+  with crosshair tooltips, click-to-pin drill-down (per-zone table at that instant → click a zone
+  to focus), alerts table, source badges on every card and chart. Sim time and wall time are never
+  drawn on one axis. Noise = "not instrumented" (no source anywhere); light comes only from the
+  historical dataset and says so. Auto-refresh keyed to sim clock movement.
+- Preservation: frozen numbers re-run exact (722.4 / 493.4 / 530.3 kWh; 16 328 / 429 / 0 viol-min);
+  `/api/state` legacy keys untouched; no new runtime dependency (httpx was already required).
+  Suite: 501 passed in the cowork container (the RL-trajectory test needs `rl/models/progress.csv`,
+  present only on the team PC). Headless-browser check of the tab: zero console errors across
+  window/zone changes, drill-down, mock-node hardware card and live Open-Meteo feed.
+- Known limitation surfaced by the tab (deliberately not hidden): simulated indoor RH sits at
+  ~85–94 % because of the coil ADP approximation (twin docstring), so the Humidity KPI reads
+  *critical* and its alert row carries an "ⓘ model limitation" note. Fixing it is one constant
+  (`ADP_APPROACH`) and a team decision, since it changes humidity metrics in the report.
+- Not done / proposed: validate the CO₂ estimator against the UCI sensor curve (needs an assumed
+  room volume + ventilation rate for that office, `[DETAIL REQUIRED]`); a real CO₂ point (SCD40)
+  on the rig would make `co2_estimated=false` for zone_b.
+
+**Hardware bring-up, stage 1 (2026-09-15, verified on the bench — first real node):**
+- Board: classic ESP32 (ESP32-D0WD-V3, CP2102 USB-UART; Windows needed the Silicon Labs CP210x
+  Universal driver, Code 28 before). Sensor DHT22 on GPIO 4. Actuator channels on indicator LEDs
+  (GPIO 16 fan, GPIO 17 heater) pending the power stage — firmware and pins unchanged for the swap.
+- Network lesson: phone hotspot must broadcast 2.4 GHz (ESP32 cannot see 5 GHz); server must run
+  with `--host 0.0.0.0`; laptop IP is DHCP and goes into `secrets.h`.
+- Verified with server logs + node echo + eyes on the LEDs:
+  - sensing: `shoebox-1` POSTs every ~2 s, all 200; 30.5-30.9 degC / 77-79 % RH; sensor health ok.
+  - control: "it is really stuffy in conference room b" -> LLM parse (zone_b, stuffy, sev 2) ->
+    ConstraintAware vent +1 -> node echoed `fan=1` in 2 s; fan LED lit.
+  - safety layer 2: heater commanded on, server duty cap forced it off at duty 0.50
+    (`duty_limited: true`); heater LED went dark.
+  - safety layer 1: server killed 16:24:47 -> fan LED off within the 10 s watchdog (seen);
+    server back 16:25:08 -> node echoed `fan=1` at 16:25:22 -> LED back on (seen). Run twice.
+- Bench note: at 240x a complaint expires in ~30 real s, so actuator tests run the sim at 10x.
+- Not yet verified: safety layer 0 (physical switch needs the actuator supply), real fan and
+  heater through the L9110, calibration run. Firmware credentials moved to git-ignored `secrets.h`
+  (template `secrets.h.example`); the password was never committed.
+- Also verified on the team PC: the Monitor tab from the separate session - 502 passed, frozen
+  numbers exact, 13 KPI cards (11 server + light/noise client-side), UTF-8 clean, zone filter and
+  the hardware card wired to the real node.
+
 **Workflow 1 outcome (verified 2026-08-17):** 10 agents, 0 errors. Every Phase A+B `[~]` above is now `[x]`:
 
 ```
@@ -410,3 +465,8 @@ so a number can never be hand-typed into a slide and drift from the code.
     regenerates) and the Experiments tab charts the reward curve beside the measured
     four-controller table and the M4 decision sentence — the brief's RL deliverable,
     answered visually without shipping the weaker comfort number.
+14. **(2026-09-15, team decision) Actuators stay on indicator LEDs for now.** The rig shows the
+    fan and heater channels on LEDs (GPIO 16 / 17) — sensing, control, watchdog and duty cap are all
+    verified on real hardware that way. No power stage is bought yet, so the demo presents these as
+    "actuator channels verified on indicators; power stage pending", never as a working fan.
+    Calibration (which needs a real heater of known wattage) waits for that purchase.

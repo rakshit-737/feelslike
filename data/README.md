@@ -1,0 +1,72 @@
+# data/ — real and historical datasets used by the Monitor tab
+
+The round-1 jury asked for less simulation-only thinking. This folder is the
+project's answer on the *data* side: every non-simulated number the dashboard
+shows comes from a file here or a live feed documented here, with licence,
+provenance and the exact code path that reads it. Nothing in this folder feeds
+the physics (`sim/twin.py`) — the frozen A/B numbers stay exact.
+
+| Source | Kind | Where it shows | Read by |
+|---|---|---|---|
+| `uci_occupancy.csv` (this folder) | **historical** | Monitor → "Historical reference" strip, Light-intensity card | `backend/external.py` → `Dataset` → `GET /api/dataset` |
+| Open-Meteo forecast + air-quality APIs (live HTTPS, no key) | **real** | Monitor → "Outdoor · real", "Air quality · real" cards and the two wall-clock charts | `backend/external.py` → `ExternalFeed` → `GET /api/external` |
+| ESP32 shoebox rig (`hardware/`) or `scripts/mock_node.py` | **hardware** | Monitor → "Physical zone" card; Live-twin tab hardware card | `backend/hardware.py` → `/api/hw/*` |
+
+## 1. `uci_occupancy.csv` — UCI Occupancy Detection
+
+* **Origin:** Candanedo, L. M., & Feldheim, V. (2016). *Accurate occupancy
+  detection of an office room from light, temperature, humidity and CO2
+  measurements using statistical learning models.* Energy and Buildings 112,
+  28–39. UCI Machine Learning Repository, dataset 357.
+  <https://archive.ics.uci.edu/dataset/357/occupancy+detection>
+* **Licence:** CC BY 4.0.
+* **What it is:** one office room in Mons, Belgium, 2–18 Feb 2015, one-minute
+  readings: temperature (°C), relative humidity (%), light (lux), CO₂ (ppm),
+  humidity ratio (kg/kg) and a ground-truth occupancy label (0/1, from
+  time-stamped photographs). 20 560 rows after merging the three original
+  files (`datatraining.txt`, `datatest.txt`, `datatest2.txt`); the `split`
+  column keeps the original file name.
+* **Why this one:** it is the smallest public dataset that carries exactly the
+  indoor signals the twin does *not* model (CO₂, light) together with occupancy
+  ground truth — so it doubles as the validation set for the CO₂ mass-balance
+  estimator in `backend/telemetry.py` (sensor curve vs model curve) once room
+  volume and ventilation rate for that office are assumed
+  (`[DETAIL REQUIRED]` — not done yet; nothing is claimed).
+* **Limitation, stated on the dashboard:** it is a European office in winter,
+  not this building. It is shown as *historical reference*, never blended with
+  simulated or live data.
+* **Reproduce:** `python -m scripts.fetch_datasets` downloads the zip from UCI
+  and rebuilds this CSV byte-for-byte (sorted by timestamp).
+
+## 2. Open-Meteo (live)
+
+* **Endpoints:** `https://api.open-meteo.com/v1/forecast` (dry-bulb, RH,
+  apparent temperature; past 7 days + 2-day forecast, hourly) and
+  `https://air-quality-api.open-meteo.com/v1/air-quality` (PM2.5, PM10,
+  European AQI, CO₂; CAMS global model).
+* **Licence / attribution:** CC BY 4.0 — "Weather data by Open-Meteo.com".
+  Non-commercial free tier; no API key.
+* **Site:** VIT Chennai, Kelambakkam (12.84 N, 80.15 E) by default.
+  Override with environment variables `FL_LAT`, `FL_LON`, `FL_SITE`.
+  Disable entirely with `FL_EXTERNAL=0` (the test suite does this).
+* **Honesty notes carried in the payload:** hourly rows after "now" are a
+  meteorological *forecast* (`kind: "forecast"`); PM/AQI values are model
+  output, not a ground monitor; the sim keeps its own seeded weather, so the
+  real outdoor curve is never drawn on the sim clock axis.
+
+## 3. Other candidate datasets (evaluated, not bundled)
+
+Listed so the team can answer "what else did you look at" — none is wired in.
+
+| Dataset | Why it would matter | Why not bundled |
+|---|---|---|
+| **CU-BEMS** (Chulalongkorn Univ., Bangkok; Sci. Data 2020) — 7-floor office, 1-min AC / lighting / plug energy + indoor temp, RH, lux, 18 months | tropical office, per-zone HVAC kWh — the closest public analogue to this building | ~1.5 GB; a per-floor month could be replayed later |
+| **Building Data Genome Project 2** (Miller et al., 2020) — 3 053 smart meters, 1 636 buildings, hourly, 2016–17 + weather | whole-building energy baselines for payback claims | hourly whole-building only, no zone or indoor comfort signals |
+| **ASHRAE Global Thermal Comfort Database II** | measured PMV / thermal-sensation votes to replace the heuristic comfort score | needs air speed + clothing inputs the twin does not have |
+| **ASHRAE Great Energy Predictor III** (Kaggle) | forecasting benchmark | competition licence; hourly, no indoor signals |
+
+## Files the dashboard must not confuse
+
+* `evals/results_energy.json`, `evals/results_whatif.json`, `rl/models/progress.csv`
+  are **experiment outputs of this repo**, not datasets. They stay under
+  `evals/` and `rl/` and are served by `/api/experiments` and `/api/rl`.

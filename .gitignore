@@ -22,3 +22,9 @@ docs/~$*
 FINALS_PROMPT.md
 __pycache__/
 .pytest_cache/
+
+# firmware credentials (template: secrets.h.example)
+hardware/firmware/feelslike_node/secrets.h
+
+# review screenshots from assistant sessions (not product)
+Claude outputs/
