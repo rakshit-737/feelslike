@@ -23,6 +23,17 @@ FINALS_PROMPT.md
 __pycache__/
 .pytest_cache/
 
+# generated historical dataset (rebuild: python -m scripts.generate_dataset)
+data/dataset/*.sqlite
+data/dataset/*.building
+
+# security material: users (password hashes), device keys, audit logs, TLS keys/certs
+data/security/
+*.pem
+*.key
+*.crt
+*.p12
+
 # firmware credentials (template: secrets.h.example)
 hardware/firmware/feelslike_node/secrets.h
 
