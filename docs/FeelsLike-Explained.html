@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FeelsLike — The Complete Explanation</title>
+<style>
+  @page { size: A4; margin: 17mm 16mm 18mm 16mm; }
+  :root { --ink:#141414; --ink2:#4a4a46; --muted:#7c7b75; --line:#dcdbd3; --soft:#f4f3ee;
+          --blue:#2a78d6; --green:#1f7a3a; --amber:#b7791f; --red:#c0392b; --purple:#6b4fbb; }
+  * { box-sizing:border-box; }
+  html { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  body { font-family:"Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink);
+         font-size:10.4pt; line-height:1.52; margin:0; }
+  h1 { font-size:20pt; letter-spacing:-0.01em; margin:0 0 4mm; break-before:page; }
+  h1 .num { color:var(--blue); margin-right:6px; }
+  h2 { font-size:13.2pt; margin:7mm 0 2mm; break-after:avoid; }
+  h3 { font-size:11pt; margin:5mm 0 1.5mm; break-after:avoid; color:#222; }
+  p { margin:0 0 2.6mm; }
+  ul, ol { margin:0 0 2.8mm; padding-left:6mm; }
+  li { margin-bottom:1.1mm; }
+  code, .mono { font-family:Consolas,"Cascadia Mono",monospace; font-size:9.2pt;
+                background:var(--soft); padding:0 3px; border-radius:3px; }
+  pre { font-family:Consolas,"Cascadia Mono",monospace; font-size:8.9pt; background:var(--soft);
+        border:1px solid var(--line); border-radius:6px; padding:3mm 3.5mm; white-space:pre-wrap;
+        break-inside:avoid; margin:0 0 3mm; }
+  table { border-collapse:collapse; width:100%; margin:1mm 0 3.5mm; font-size:9.4pt; break-inside:avoid; }
+  th, td { border:1px solid var(--line); padding:1.4mm 2mm; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-weight:600; }
+  td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
+  tr.lead td { background:#eaf2fc; font-weight:600; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--blue); background:#f8fbff;
+         border-radius:6px; padding:3mm 4mm; margin:2mm 0 3.5mm; break-inside:avoid; }
+  .box.green { border-left-color:var(--green); background:#f5fbf6; }
+  .box.amber { border-left-color:var(--amber); background:#fffaf0; }
+  .box.red { border-left-color:var(--red); background:#fdf6f5; }
+  .box .t { font-weight:700; margin-bottom:1mm; display:block; }
+  .fig { margin:2mm 0 4mm; break-inside:avoid; text-align:center; }
+  .fig svg { max-width:100%; height:auto; }
+  .cap { font-size:8.8pt; color:var(--ink2); margin-top:1mm; text-align:center; }
+  .tag { display:inline-block; font-size:8pt; font-weight:700; letter-spacing:0.04em; padding:0 5px;
+         border-radius:3px; border:1px solid; vertical-align:1px; }
+  .tag.done { color:var(--green); border-color:var(--green); }
+  .tag.built { color:var(--blue); border-color:var(--blue); }
+  .tag.no { color:var(--red); border-color:var(--red); }
+  .tag.paused { color:var(--amber); border-color:var(--amber); }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:5mm; }
+  .small { font-size:9pt; color:var(--ink2); }
+  .kw { font-weight:600; }
+  /* cover */
+  .cover { height:250mm; display:flex; flex-direction:column; justify-content:center; }
+  .cover .eyebrow { font-size:10pt; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); }
+  .cover .title { font-size:40pt; font-weight:750; letter-spacing:-0.02em; margin:3mm 0 1mm; }
+  .cover .sub { font-size:15pt; color:var(--ink2); margin-bottom:10mm; }
+  .cover .meta { font-size:10pt; color:var(--ink2); border-top:1px solid var(--line); padding-top:4mm; }
+  .toc { columns:2; column-gap:8mm; font-size:10pt; }
+  .toc div { break-inside:avoid; margin-bottom:1.3mm; }
+  .toc b { color:var(--blue); display:inline-block; width:7mm; }
+  .qa dt { font-weight:700; margin-top:3mm; break-after:avoid; }
+  .qa dd { margin:0.8mm 0 0 0; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ COVER -->
+<section class="cover">
+  <div class="eyebrow">Team Goldilocks · Hackathon problem statement: Digital Twin Building Optimizer with NLP Feedback</div>
+  <div class="title">FeelsLike</div>
+  <div class="sub">Buildings that listen — the complete explanation, written for someone who knows nothing about the project</div>
+  <div class="box" style="max-width:150mm">
+    <span class="t">The project in three sentences</span>
+    People in an office type ordinary complaints like <i>"it's stuffy in Conference Room B"</i>.
+    FeelsLike turns each complaint into a precise, safe instruction for the air-conditioning, checks the
+    effect in a physics simulation of the building (a "digital twin"), and drives the real system.
+    In a 7-day simulated comparison on identical weather it used <b>26.6% less energy</b> than a typical
+    fixed schedule while producing <b>zero minutes of comfort violations</b>.
+  </div>
+  <div class="meta">
+    Document state: 15 September 2026 · Repository: <span class="mono">github.com/rakshit-737/feelslike</span> (public) ·
+    Every number in this document comes from a file or a run in that repository. Where something is simulated,
+    estimated or not yet built, it says so.
+  </div>
+</section>
+
+<!-- ============================================================ TOC -->
+<h1 style="break-before:page">Contents</h1>
+<div class="toc">
+  <div><b>1</b> The problem, in plain words</div>
+  <div><b>2</b> The words you need first</div>
+  <div><b>3</b> The idea in one picture</div>
+  <div><b>4</b> Follow one complaint, start to finish</div>
+  <div><b>5</b> The digital twin (the physics)</div>
+  <div><b>6</b> Understanding the complaint (NLP)</div>
+  <div><b>7</b> Constraints: how a complaint becomes an instruction</div>
+  <div><b>8</b> The controller and its safety envelope</div>
+  <div><b>9</b> The experiment and the headline result</div>
+  <div><b>10</b> Comfort memory</div>
+  <div><b>11</b> Explain, What-if, Maintenance, Analytics</div>
+  <div><b>12</b> The Monitor tab, real data and pricing</div>
+  <div><b>13</b> Reinforcement learning — and why it isn't shipped</div>
+  <div><b>14</b> The honesty machinery</div>
+  <div><b>15</b> The hardware: a real zone in the loop</div>
+  <div><b>16</b> Calibration: making the twin match reality</div>
+  <div><b>17</b> Is it feasible? Cost, deployment, payback</div>
+  <div><b>18</b> Limitations we state openly</div>
+  <div><b>19</b> The dashboard, tab by tab</div>
+  <div><b>20</b> How the code is organised and how to run it</div>
+  <div><b>21</b> Where the project stands today</div>
+  <div><b>22</b> Questions a judge will ask</div>
+  <div><b>23</b> Glossary</div>
+</div>
+<div class="box" style="margin-top:8mm">
+  <span class="t">How to read this</span>
+  Sections 1–4 give the whole story at a high level. Sections 5–13 open each part of the machine.
+  Section 14 explains why the numbers can be trusted. Sections 15–18 cover the physical hardware and the
+  real-world case. Sections 19–23 are practical: using it, its current state, likely questions, and a glossary.
+  Status tags used throughout: <span class="tag done">VERIFIED</span> works and was checked by a run;
+  <span class="tag built">BUILT</span> code exists and is tested but not proven on hardware yet;
+  <span class="tag paused">PAUSED</span> deliberately waiting; <span class="tag no">NOT DONE</span> not started.
+</div>
+
+<!-- ============================================================ 1 -->
+<h1><span class="num">1</span>The problem, in plain words</h1>
+<p>Most office buildings cool every room on a fixed timetable, set to a cold number such as 22 °C, "just in case".
+Nobody asks the people inside whether they are comfortable. Two things go wrong at once:</p>
+<ul>
+  <li><b>Energy is wasted.</b> Air-conditioning (HVAC) is the largest single electricity use in an Indian office —
+  roughly 40–60% of the building's electricity, per the LBNL/BEE study cited in our feasibility pack. Over-cooling a room
+  by a degree or two, all day, every day, is expensive.</li>
+  <li><b>People are still uncomfortable.</b> The same room is too cold for someone by the window and too warm for someone
+  near the projector. The only feedback channel is a facilities ticket that takes hours or days — or a sweater, or a
+  space heater under the desk, which wastes even more energy.</li>
+</ul>
+<p>The obvious fix — "just set the thermostat warmer" — saves energy but makes people too hot. The other obvious fix —
+"add occupancy sensors and a timer" — helps with empty rooms but still cannot hear that <i>this</i> meeting in
+<i>this</i> room is stuffy right now.</p>
+<div class="box">
+  <span class="t">What FeelsLike does differently</span>
+  It treats the occupants as sensors. Anyone can say, in their own words, what feels wrong. The system turns that
+  into a small, time-limited, safety-bounded adjustment for exactly that room, and otherwise runs the building
+  as lean as it safely can. The goal is <b>efficiency without sacrifice</b>: lower energy <i>and</i> fewer uncomfortable minutes.
+</div>
+<h2>Why a hackathon cares</h2>
+<p>The problem statement asks for three things combined: a <b>digital twin</b> of a building, <b>optimisation</b> of how
+it runs, and <b>natural-language feedback</b> from people. FeelsLike is built around exactly that combination, and after
+round 1 the jury asked teams for more hardware, more original thinking, and a clearer view of real-world feasibility —
+which is why this project now includes a real physical sensor node, a cost and payback analysis, and a written list of
+its own limitations.</p>
+
+<!-- ============================================================ 2 -->
+<h1><span class="num">2</span>The words you need first</h1>
+<p>Only a handful of ideas are needed to follow everything else. A longer glossary is at the end.</p>
+<table>
+  <tr><th style="width:26%">Term</th><th>What it means here</th></tr>
+  <tr><td><b>HVAC</b></td><td>Heating, Ventilation and Air-Conditioning — the equipment that cools rooms and moves fresh air. In this project it mostly <i>cools</i> (it is modelled on a hot Indian climate).</td></tr>
+  <tr><td><b>Zone</b></td><td>One area the HVAC controls separately, such as a conference room. Our model building has five zones.</td></tr>
+  <tr><td><b>Setpoint</b></td><td>The target temperature you ask the HVAC to hold, e.g. 25.0 °C. A <i>higher</i> cooling setpoint means <i>less</i> cooling and less energy.</td></tr>
+  <tr><td><b>Vent / fan level</b></td><td>How hard the fan pushes air: 0 (off), 1, or 2. More fan brings more outdoor air (helps with stuffiness) but costs electricity.</td></tr>
+  <tr><td><b>kWh</b></td><td>Kilowatt-hour, the unit on an electricity bill. 1 kWh ≈ running a 1 kW appliance for one hour.</td></tr>
+  <tr><td><b>Comfort band</b></td><td>The temperature range counted as comfortable while people are present: <b>23.0 °C to 26.5 °C</b>.</td></tr>
+  <tr><td><b>Violation-minute</b></td><td>One minute during which an <i>occupied</i> zone is outside the comfort band. This is how discomfort is measured. An empty room can never violate.</td></tr>
+  <tr><td><b>Digital twin</b></td><td>A computer model that behaves like the real building: given weather, people and HVAC commands, it computes how each room's temperature changes and how much electricity is used.</td></tr>
+  <tr><td><b>NLP</b></td><td>Natural Language Processing — getting a computer to understand free text. Here: turning "the cabin is freezing" into <i>zone = Cabin C, issue = too cold, severity = 2</i>.</td></tr>
+  <tr><td><b>LLM</b></td><td>Large Language Model — an AI text model (we use one hosted by Groq). It is one component, with an offline fallback so the system never depends on it.</td></tr>
+  <tr><td><b>Constraint</b></td><td>The structured, time-limited instruction created from one complaint: "make Conference Room B about 0.4 °C cooler with more airflow, fading over two hours".</td></tr>
+  <tr><td><b>Controller</b></td><td>The decision logic that, every simulated minute, chooses each zone's setpoint and fan level.</td></tr>
+</table>
+
+<!-- ============================================================ 3 -->
+<h1><span class="num">3</span>The idea in one picture</h1>
+<div class="fig">
+<svg viewBox="0 0 760 430" width="760" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif" font-size="12">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#4a4a46"/></marker></defs>
+  <rect x="10" y="20" width="150" height="62" rx="10" fill="#fff8ec" stroke="#b7791f"/>
+  <text x="85" y="45" text-anchor="middle" font-weight="700">Occupant</text>
+  <text x="85" y="63" text-anchor="middle" fill="#4a4a46">"it's stuffy in room B"</text>
+  <text x="85" y="76" text-anchor="middle" fill="#7c7b75" font-size="10">web chat · Slack/Teams · kiosk</text>
+  <line x1="160" y1="51" x2="208" y2="51" stroke="#4a4a46" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="210" y="14" width="170" height="74" rx="10" fill="#eef4fd" stroke="#2a78d6"/>
+  <text x="295" y="38" text-anchor="middle" font-weight="700">Parser</text>
+  <text x="295" y="55" text-anchor="middle" fill="#4a4a46">LLM, with offline rules fallback</text>
+  <text x="295" y="72" text-anchor="middle" fill="#4a4a46">zone · issue · severity · confidence</text>
+  <line x1="380" y1="51" x2="428" y2="51" stroke="#4a4a46" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="430" y="14" width="170" height="74" rx="10" fill="#eef4fd" stroke="#2a78d6"/>
+  <text x="515" y="38" text-anchor="middle" font-weight="700">Constraint store</text>
+  <text x="515" y="55" text-anchor="middle" fill="#4a4a46">decays over 2 h</text>
+  <text x="515" y="72" text-anchor="middle" fill="#4a4a46">conflicts arbitrated fairly</text>
+  <line x1="515" y1="88" x2="515" y2="128" stroke="#4a4a46" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="400" y="130" width="230" height="84" rx="10" fill="#f5fbf6" stroke="#1f7a3a"/>
+  <text x="515" y="154" text-anchor="middle" font-weight="700">Controller</text>
+  <text x="515" y="171" text-anchor="middle" fill="#4a4a46">schedule + complaint offset</text>
+  <text x="515" y="188" text-anchor="middle" fill="#4a4a46">hard safety envelope (never bypassed)</text>
+  <text x="515" y="204" text-anchor="middle" fill="#7c7b75" font-size="10">21.5–29.0 °C · offset ≤ ±1.8 K · fan 0–2</text>
+  <line x1="460" y1="214" x2="300" y2="268" stroke="#4a4a46" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="570" y1="214" x2="640" y2="268" stroke="#4a4a46" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="150" y="270" width="290" height="90" rx="10" fill="#fbfbf8" stroke="#4a4a46"/>
+  <text x="295" y="294" text-anchor="middle" font-weight="700">Digital twin — 5 simulated zones</text>
+  <text x="295" y="312" text-anchor="middle" fill="#4a4a46">heat-flow physics, energy, comfort</text>
+  <text x="295" y="329" text-anchor="middle" fill="#4a4a46">raced against an identical twin on a</text>
+  <text x="295" y="345" text-anchor="middle" fill="#4a4a46">dumb schedule, same weather</text>
+  <rect x="490" y="270" width="260" height="90" rx="10" fill="#fff5f4" stroke="#c0392b"/>
+  <text x="620" y="294" text-anchor="middle" font-weight="700">Real hardware — 1 zone</text>
+  <text x="620" y="312" text-anchor="middle" fill="#4a4a46">ESP32 + DHT22 sensor over Wi-Fi</text>
+  <text x="620" y="329" text-anchor="middle" fill="#4a4a46">same controller, same adapter seam</text>
+  <text x="620" y="345" text-anchor="middle" fill="#4a4a46">3 independent safety layers</text>
+  <line x1="295" y1="360" x2="295" y2="395" stroke="#4a4a46" stroke-width="1.5"/>
+  <line x1="620" y1="360" x2="620" y2="395" stroke="#4a4a46" stroke-width="1.5"/>
+  <line x1="295" y1="395" x2="620" y2="395" stroke="#4a4a46" stroke-width="1.5"/>
+  <line x1="85" y1="395" x2="295" y2="395" stroke="#4a4a46" stroke-width="1.5"/>
+  <line x1="85" y1="395" x2="85" y2="84" stroke="#4a4a46" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="190" y="415" text-anchor="middle" fill="#2a78d6" font-weight="600">Dashboard: live race, explanations, alerts, every number labelled by source</text>
+</svg>
+<div class="cap">Figure 1. The whole system. Text goes in at the top left; the building responds; the dashboard shows what happened and why.</div>
+</div>
+<p>Two design choices matter more than any other:</p>
+<ol>
+  <li><b>The controller is the only thing that writes to the building, and everything it writes passes a hard safety check.</b>
+  Complaints, the AI, humidity and crowd adjustments can only <i>request</i> small offsets; they can never command a dangerous
+  temperature.</li>
+  <li><b>Every result comes from a fair A/B race.</b> Two identical twins run side by side on bit-identical weather and
+  identical occupants. One uses FeelsLike, the other uses the typical fixed schedule. The only difference is the controller,
+  so the difference in energy and comfort is caused by the controller.</li>
+</ol>
+
+<!-- ============================================================ 4 -->
+<h1><span class="num">4</span>Follow one complaint, start to finish</h1>
+<p>At 14:05 on a Tuesday, someone types into the dashboard: <b><i>"it's really stuffy in conference room b"</i></b>.
+Here is everything that happens, in order.</p>
+<table>
+  <tr><th style="width:6%">#</th><th style="width:22%">Step</th><th>What happens</th></tr>
+  <tr><td>1</td><td>Privacy scrub</td><td>Phone numbers and e-mail addresses are removed <i>before</i> the text leaves the server, while zone names and temperatures are protected so the meaning survives.</td></tr>
+  <tr><td>2</td><td>Parse</td><td>The LLM reads the text and returns strict JSON: zone <span class="mono">zone_b</span>, issue <span class="mono">stuffy</span>, severity 2, confidence ~0.9. If the AI is unreachable or returns anything invalid, the offline rules parser answers instead, in about a millisecond. Measured live: ~1.9 s via the LLM.</td></tr>
+  <tr><td>3</td><td>Guardrails</td><td>An unknown zone is erased (the system never acts on an invented room). No zone named → it asks "which zone?" instead of guessing. Not a comfort complaint ("the projector is broken") → ignored. "No longer stuffy" → the zone's complaints are cleared.</td></tr>
+  <tr><td>4</td><td>Constraint</td><td>A constraint is filed: stuffy at severity 2 means <b>−0.4 °C</b> and <b>fan +1</b> for Conference Room B, starting at full weight and fading by half every 45 minutes, gone after 2 hours.</td></tr>
+  <tr><td>5</td><td>Arbitration</td><td>If someone else just said room B is freezing, the two are combined by a weighted average (severity × confidence × recency) and marked <b>CONFLICT</b> with a human-readable explanation.</td></tr>
+  <tr><td>6</td><td>Control</td><td>On the next simulated minute the controller takes the normal schedule (25.0 °C for an occupied room), adds the −0.4 °C offset (capped at ±1.8), clamps to 21.5–29.0 °C, and raises the fan.</td></tr>
+  <tr><td>7</td><td>Physics</td><td>The twin computes the room's new temperature and the extra electricity the fan and cooling use.</td></tr>
+  <tr><td>8</td><td>Hardware</td><td>Conference Room B is also the real zone. Its new fan level is sent to the ESP32 in the reply to its next reading, within ~2 seconds. <span class="tag done">VERIFIED</span> on the bench: the fan channel lit up and the board echoed <span class="mono">fan=1</span> two seconds later.</td></tr>
+  <tr><td>9</td><td>Record</td><td>A decision record is logged: what changed, why (<span class="mono">reason_code</span>), estimated energy and comfort effect. The feed shows the parsed chip, latency, and whether AI was used.</td></tr>
+  <tr><td>10</td><td>Learn</td><td>If room B is reported stuffy around the same hour on two different days, comfort memory will start pre-applying a gentle fix 30 minutes early.</td></tr>
+</table>
+<div class="box green"><span class="t">The point of this walkthrough</span>
+A casual sentence becomes a bounded, reversible, explainable action in about two seconds — and at no step can a
+misunderstanding produce an unsafe command. The worst case of a bad parse is a clarifying question or a small
+offset that fades on its own.</div>
+
+<!-- ============================================================ 5 -->
+<h1><span class="num">5</span>The digital twin (the physics)</h1>
+<h2>The building</h2>
+<p>The twin models a 520 m² office floor with five zones. Each has its own size, orientation (which affects sunshine),
+heat-storage capacity, insulation, cooling capacity and occupancy pattern.</p>
+<table>
+  <tr><th>Zone</th><th>Name</th><th>Faces</th><th class="n">Area m²</th><th class="n">Thermal mass C (MJ/K)</th><th class="n">Envelope UA (W/K)</th><th class="n">Cooling capacity (W)</th><th>People pattern</th></tr>
+  <tr><td>A</td><td>Open Office A</td><td>North</td><td class="n">220</td><td class="n">3.2</td><td class="n">500</td><td class="n">16,000</td><td>office (up to 24)</td></tr>
+  <tr class="lead"><td>B</td><td>Conference Room B</td><td>South</td><td class="n">60</td><td class="n">0.9</td><td class="n">160</td><td class="n">7,000</td><td>meetings 10–11, 14–15:30, 16:30–17:30</td></tr>
+  <tr><td>C</td><td>Cabin C</td><td>East</td><td class="n">40</td><td class="n">0.6</td><td class="n">110</td><td class="n">4,000</td><td>3 people, 9–19</td></tr>
+  <tr><td>D</td><td>Lobby D</td><td>West</td><td class="n">90</td><td class="n">1.4</td><td class="n">300</td><td class="n">8,000</td><td>lobby traffic</td></tr>
+  <tr><td>E</td><td>Cafeteria E</td><td>South</td><td class="n">110</td><td class="n">1.6</td><td class="n">340</td><td class="n">10,000</td><td>lunch surge</td></tr>
+</table>
+<p class="small">Room B is highlighted because it is the zone mirrored by the real hardware (Section 15).</p>
+
+<h2>The model: a room as a leaky bucket of heat</h2>
+<p>Each zone is a <b>lumped RC thermal model</b> — the same idea as an electrical circuit with a resistor (R) and a
+capacitor (C). Think of the room's air and furniture as a bucket that holds heat (the capacitance C). Heat leaks in
+through walls and windows from the hot outdoors (the conductance UA = 1/R). Sun, people and neighbouring rooms add heat.
+The air-conditioner removes heat. The temperature is how full the bucket is.</p>
+<div class="fig">
+<svg viewBox="0 0 700 250" width="700" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif" font-size="12">
+  <defs><marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c0392b"/></marker>
+        <marker id="c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2a78d6"/></marker></defs>
+  <rect x="250" y="60" width="200" height="130" rx="12" fill="#fbfbf8" stroke="#4a4a46" stroke-width="1.5"/>
+  <text x="350" y="118" text-anchor="middle" font-weight="700" font-size="14">Zone air + contents</text>
+  <text x="350" y="138" text-anchor="middle" fill="#4a4a46">temperature T, stores heat C</text>
+  <line x1="40" y1="90" x2="245" y2="90" stroke="#c0392b" stroke-width="2" marker-end="url(#b)"/>
+  <text x="40" y="82" fill="#c0392b">Outdoors (hot): UA · (T_out − T)</text>
+  <line x1="40" y1="125" x2="245" y2="125" stroke="#c0392b" stroke-width="2" marker-end="url(#b)"/>
+  <text x="40" y="117" fill="#c0392b">Sun: solar gain by facade &amp; hour</text>
+  <line x1="40" y1="160" x2="245" y2="160" stroke="#c0392b" stroke-width="2" marker-end="url(#b)"/>
+  <text x="40" y="152" fill="#c0392b">People: 100 W each</text>
+  <line x1="350" y1="20" x2="350" y2="55" stroke="#c0392b" stroke-width="2" marker-end="url(#b)"/>
+  <text x="358" y="32" fill="#c0392b">Neighbour rooms: G · (T_j − T)</text>
+  <line x1="455" y1="100" x2="660" y2="100" stroke="#2a78d6" stroke-width="2" marker-end="url(#c)"/>
+  <text x="470" y="92" fill="#2a78d6">Cooling removed (capped at capacity)</text>
+  <line x1="455" y1="150" x2="660" y2="150" stroke="#2a78d6" stroke-width="2" marker-end="url(#c)"/>
+  <text x="470" y="142" fill="#2a78d6">Ventilation: 45 W/K per fan level</text>
+  <text x="350" y="228" text-anchor="middle" fill="#4a4a46">Electricity = cooling ÷ COP 3.4 + fan power (0 / 150 / 420 W)</text>
+</svg>
+<div class="cap">Figure 2. What flows into and out of one zone every simulated minute.</div>
+</div>
+<p>Every simulated minute (60 s), for each zone, the twin computes:</p>
+<pre>T_free = T + (60 s / C) × [ UA·(T_out − T)                   heat leaking in through the envelope
+                           + 45·fan·(T_out − T)             outdoor air brought in by ventilation
+                           + solar_peak × solar_factor      sunshine (depends on facade and hour)
+                           + 100 W × people                  body heat
+                           + Σ G_ij·(T_neighbour − T) ]      heat through shared walls
+
+q_cool = min( C·(T_free − setpoint) / 60 s , cooling capacity )   "perfect thermostat, finite capacity"
+T_new  = T_free − 60 s · q_cool / C
+Power  = q_cool / 3.4 (COP) + fan power {0: 0 W, 1: 150 W, 2: 420 W}</pre>
+<ul>
+  <li><b>Perfect thermostat, finite capacity:</b> the AC removes exactly the heat needed to hit the setpoint — unless that
+  exceeds the unit's capacity, in which case the room drifts above setpoint. That is how real overload shows up.</li>
+  <li><b>COP 3.4</b> means one unit of electricity moves 3.4 units of heat out of the room — typical for an efficient split AC.</li>
+  <li><b>Neighbouring zones</b> share walls with conductances between 40 and 110 W/K, so a hot lobby warms the open office.
+  All zones update simultaneously from the previous minute's values, so the order in which zones are computed never changes the result.</li>
+  <li><b>Weather</b> is synthetic, hot and deterministic: the same "seed" number always produces exactly the same weather.
+  An optional live-weather fetch exists but never feeds the headline results.</li>
+  <li><b>Humidity</b> is tracked with a proper moisture balance but is <i>not</i> charged to energy — see Section 18.</li>
+</ul>
+<div class="box amber"><span class="t">Why this simple model and not a full CFD simulation?</span>
+A lumped RC model is the standard, literature-backed choice for control work: it runs thousands of times faster than
+real time on a laptop (the dashboard races a week in minutes), it has a handful of parameters that can be measured
+from a real room (Section 16), and it captures the effects that matter for a setpoint decision — thermal inertia,
+envelope loss, sun, people and capacity. It does not model air currents, radiant heat or stratification; those gaps are
+listed as limitations, not hidden.</div>
+
+<!-- ============================================================ 6 -->
+<h1><span class="num">6</span>Understanding the complaint (NLP)</h1>
+<h2>What the parser must produce</h2>
+<p>Every message, whatever the language or wording, becomes the same small structure:</p>
+<pre>{ "is_comfort_complaint": true,
+  "zone_id": "zone_b",            the single primary zone (or null)
+  "zone_ids": ["zone_b"],         every zone named, for multi-zone messages
+  "issue": "stuffy",              too_hot | too_cold | stuffy | humid | drafty | other
+  "severity": 2,                  1 mild · 2 clear discomfort · 3 urgent
+  "confidence": 0.9,              0 to 1
+  "requires_clarification": false,
+  "language": "en" }              en | hinglish | mixed</pre>
+<h2>Two parsers, one contract</h2>
+<div class="two">
+<div>
+<h3>Primary: the LLM</h3>
+<p>A system prompt carries the exact schema, the list of real zones with their nicknames, anti-hallucination rules and
+worked examples (including Hinglish and a "projector is broken" negative). Any OpenAI-compatible provider works;
+the project currently uses <b>gpt-oss-120b on Groq's free tier</b>, measured at ~1.9 s per message. A 15-second timeout
+protects the live demo.</p>
+</div>
+<div>
+<h3>Fallback: the offline rules parser</h3>
+<p>A staged pipeline with no network and no AI: normalise text → detect language → detect retraction → find zones
+(including typo tolerance) → detect intent → estimate severity → check context (appliances, outdoors) → compute confidence.
+It answers in about a millisecond, so the demo works on stage even with no internet.</p>
+</div>
+</div>
+<p>Any failure of the LLM — no key, network error, malformed JSON, a schema violation — silently hands the message to the
+rules parser, and the feed shows which one answered.</p>
+<h2>What the parser handles</h2>
+<table>
+  <tr><th style="width:30%">Kind of message</th><th>Example</th><th style="width:28%">Result</th></tr>
+  <tr><td>Plain complaint</td><td>"It's way too hot in Conference Room B"</td><td>too_hot, room B</td></tr>
+  <tr><td>Typos</td><td>"teh confrence rom is stuffyy"</td><td>stuffy, room B</td></tr>
+  <tr><td>Hinglish / Tamil-English</td><td>"reception aur canteen dono me garmi hai"</td><td>too_hot, lobby + cafeteria</td></tr>
+  <tr><td>Multi-zone</td><td>"The lobby and cafeteria are too hot"</td><td>two constraints, one complaint id</td></tr>
+  <tr><td>Sarcasm / indirect</td><td>"love how I need gloves to type"</td><td>too_cold</td></tr>
+  <tr><td>Not about comfort</td><td>"the projector in room b is broken"</td><td>ignored</td></tr>
+  <tr><td>Appliance or outdoors</td><td>"the coffee machine is hot", "41 degrees outside"</td><td>ignored</td></tr>
+  <tr><td>No zone</td><td>"it's hot in narnia"</td><td>asks which zone — never guesses</td></tr>
+  <tr><td>Retraction</td><td>"no longer stuffy in reception"</td><td>clears that zone's complaints</td></tr>
+</table>
+<h2>How good is it — honestly</h2>
+<p>The benchmark has 70 labelled cases (30 development, 40 held-out). Because the team improved the parser by studying
+those cases, their scores read close to 100% and are <b>not</b> quoted as real-world accuracy. The number that is quoted
+comes from a separate <b>blind probe</b> of 20 sentences that were never used for development (Section 14 explains how
+it is kept honest):</p>
+<table>
+  <tr><th>Blind probe v2 (20 unseen cases, measured once)</th><th class="n">Rules parser</th><th class="n">LLM (auto mode)</th></tr>
+  <tr><td>Zone set exactly right</td><td class="n">90%</td><td class="n">90%</td></tr>
+  <tr><td>Complaint vs not-a-complaint</td><td class="n">60%</td><td class="n">70%</td></tr>
+  <tr><td>Issue right</td><td class="n">65%</td><td class="n">75%</td></tr>
+  <tr class="lead"><td>Everything right at once ("exact triple")</td><td class="n">45%</td><td class="n">55%</td></tr>
+</table>
+<div class="box"><span class="t">Why 45–55% is still safe</span>
+The number that protects the building is zone extraction at 90% — and both zone misses added an extra real zone; neither
+invented a room. When the zone is unclear the system asks instead of acting. A wrong issue produces at most a ±1.8 °C
+offset that fades within two hours. What still fails is predictable: fresh metaphors ("greenhouse vibes"), inverted sarcasm
+("sponsored by the penguin exhibit") and implied heat in Hinglish. Those failures are committed in the repository, not deleted.</div>
+
+<!-- ============================================================ 7 -->
+<h1><span class="num">7</span>Constraints: how a complaint becomes an instruction</h1>
+<h2>The effect table</h2>
+<p>Each issue and severity maps to a fixed setpoint offset and a fan change. Negative offset = cooler.</p>
+<table>
+  <tr><th>Issue</th><th class="n">Severity 1</th><th class="n">Severity 2</th><th class="n">Severity 3</th><th class="n">Fan</th></tr>
+  <tr><td>too_hot</td><td class="n">−0.8 °C</td><td class="n">−1.3 °C</td><td class="n">−1.8 °C</td><td class="n">0</td></tr>
+  <tr><td>too_cold</td><td class="n">+0.8 °C</td><td class="n">+1.3 °C</td><td class="n">+1.8 °C</td><td class="n">0</td></tr>
+  <tr><td>stuffy</td><td class="n">−0.3 °C</td><td class="n">−0.4 °C</td><td class="n">−0.5 °C</td><td class="n">+1</td></tr>
+  <tr><td>humid</td><td class="n">−0.4 °C</td><td class="n">−0.5 °C</td><td class="n">−0.6 °C</td><td class="n">+1</td></tr>
+  <tr><td>drafty</td><td class="n">+0.3 °C</td><td class="n">+0.4 °C</td><td class="n">+0.5 °C</td><td class="n">−1</td></tr>
+</table>
+<h2>Complaints fade: recency-weighted democracy, not a ticket queue</h2>
+<p>A complaint is strongest the moment it is made and loses influence over time:</p>
+<pre>weight = severity × confidence × 0.5^(age / 45 minutes)          and exactly 0 after 2 hours</pre>
+<div class="fig">
+<svg viewBox="0 0 640 220" width="640" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif" font-size="11">
+  <line x1="60" y1="170" x2="600" y2="170" stroke="#4a4a46"/>
+  <line x1="60" y1="20" x2="60" y2="170" stroke="#4a4a46"/>
+  <line x1="60" y1="95" x2="600" y2="95" stroke="#dcdbd3" stroke-dasharray="4 4"/>
+  <line x1="60" y1="57.5" x2="600" y2="57.5" stroke="#dcdbd3" stroke-dasharray="4 4"/>
+  <text x="52" y="24" text-anchor="end">100%</text><text x="52" y="99" text-anchor="end">50%</text><text x="52" y="174" text-anchor="end">0</text>
+  <text x="60" y="188" text-anchor="middle">0</text><text x="262" y="188" text-anchor="middle">45 min</text>
+  <text x="465" y="188" text-anchor="middle">90 min</text><text x="600" y="188" text-anchor="middle">120 min</text>
+  <path d="M60,20 L105,38 L150,53 L195,67 L240,79 L285,90 L330,99 L375,108 L420,115 L465,121 L510,126 L555,131 L600,134.5" fill="none" stroke="#2a78d6" stroke-width="2.5"/>
+  <line x1="600" y1="134.5" x2="600" y2="170" stroke="#c0392b" stroke-width="2.5"/>
+  <text x="610" y="150" fill="#c0392b">expires</text>
+  <text x="330" y="210" text-anchor="middle" fill="#4a4a46">time since the complaint — half-life 45 min, hard expiry at 2 h</text>
+</svg>
+<div class="cap">Figure 3. A complaint's influence over time. Re-reporting creates a fresh, full-strength constraint.</div>
+</div>
+<p>Why this design: if a room stays uncomfortable, people say so again and the new complaint counts in full. If the issue
+is fixed or the meeting ends, the adjustment quietly disappears and the building returns to its efficient schedule.
+Nobody's complaint wins forever, and nobody has to close a ticket.</p>
+<h2>When people disagree</h2>
+<p>If one person says room B is too hot and another says it's freezing, both constraints stay active and the zone's offset
+becomes their weighted average (by severity × confidence × recency). The dashboard marks the zone <b>CONFLICT</b> and shows a
+sentence such as "CONFLICT in zone: too hot (sev 2, 3m ago) vs too cold (sev 3, 1m ago) → severity-weighted compromise
++0.4 °C". Because both decay, the compromise shifts naturally as the situation changes.</p>
+<h2>Human approval and all-clears</h2>
+<ul>
+  <li>In the <b>human_approval</b> safety mode a complaint is recorded and visible but moves nothing until an operator approves it.
+  Rejected constraints stay in history but never influence control.</li>
+  <li>An <b>all-clear</b> ("fine now in room B") expires that zone's active constraints immediately, using a separate
+  <span class="mono">cleared</span> timestamp so the original complaint time is kept — comfort memory relies on it.</li>
+</ul>
+
+<!-- ============================================================ 8 -->
+<h1><span class="num">8</span>The controller and its safety envelope</h1>
+<h2>The normal schedule</h2>
+<p>Without any complaints, the shipped <b>balanced</b> controller runs each zone on an occupancy-aware schedule:</p>
+<table>
+  <tr><th>Situation</th><th class="n">Setpoint</th><th>Why</th></tr>
+  <tr><td>People present</td><td class="n">25.0 °C</td><td>Inside the comfort band, warmer than the typical 22 °C, so far less energy</td></tr>
+  <tr><td>People expected within 30 minutes</td><td class="n">26.0 °C</td><td>Pre-cool gently before arrival, with a ventilation flush</td></tr>
+  <tr><td>Room empty, nobody expected</td><td class="n">28.5 °C</td><td>Setback — don't cool air nobody is breathing</td></tr>
+</table>
+<h2>The one formula that writes to the building</h2>
+<pre>written setpoint = clamp( schedule(objective)  +  clamp(offset, −1.8 K … +1.8 K) ,  21.5 °C … 29.0 °C )
+written fan      = clamp( schedule fan + complaint fan change + crowd boost ,  0 … 2 )</pre>
+<p>The offset is the <i>only</i> channel through which complaints, humidity or crowding can influence control, and it is
+clamped twice. Tests pile forty maximum-severity complaints onto one zone under every objective and a broken building, and the
+written command never leaves the envelope.</p>
+<div class="two">
+<div>
+<h3>Extra adaptive terms</h3>
+<ul>
+  <li><b>Humidity term</b> (max 0.6 K cooler): fires only when a zone has an active humid or stuffy complaint and high humidity
+  — a DX coil only dehumidifies while it is cooling.</li>
+  <li><b>Crowd term</b> (max 1.0 K cooler): for zones above their design headcount, like the cafeteria at lunch.</li>
+  <li><b>Crowd fan boost</b>: needs both ≥20 people and ≥80% of design density.</li>
+</ul>
+</div>
+<div>
+<h3>Objectives (operator's choice)</h3>
+<table>
+  <tr><th>Objective</th><th class="n">Occupied / pre-cool / empty</th></tr>
+  <tr><td>comfort</td><td class="n">24.5 / 25.5 / 28.0</td></tr>
+  <tr class="lead"><td>balanced (shipped)</td><td class="n">25.0 / 26.0 / 28.5</td></tr>
+  <tr><td>cost, carbon</td><td class="n">25.7 / 26.7 / 29.0</td></tr>
+  <tr><td>energy</td><td class="n">25.9 / 26.9 / 29.0</td></tr>
+</table>
+<p class="small">Cost and carbon share one schedule on purpose: with a flat tariff and a flat grid-carbon factor, minimising rupees
+and minimising CO₂ are the same problem.</p>
+</div>
+</div>
+<h2>Five safety modes</h2>
+<table>
+  <tr><th style="width:26%">Mode</th><th>What the controller does</th></tr>
+  <tr><td>automatic</td><td>Applies decisions immediately (default).</td></tr>
+  <tr><td>recommend_only</td><td>Computes and logs decisions but writes only the plain schedule.</td></tr>
+  <tr><td>human_approval</td><td>Queues complaint-driven changes until an operator approves them.</td></tr>
+  <tr><td>emergency_override</td><td>Ignores occupant constraints and drives every zone to the safe band.</td></tr>
+  <tr><td>maintenance_lockout</td><td>Freezes locked zones at their base schedule. A capacity alert locks its zone automatically, so the controller stops chasing a setpoint a saturated unit can't reach.</td></tr>
+</table>
+
+<!-- ============================================================ 9 -->
+<h1><span class="num">9</span>The experiment and the headline result</h1>
+<h2>The setup</h2>
+<p>Seven simulated days (a Monday-to-Sunday week), weather seed 7, identical occupants, every controller started from the same
+state. Reproduce with <span class="mono">python -m scripts.demo_day</span>.</p>
+<div class="fig">
+<svg viewBox="0 0 700 250" width="700" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif" font-size="12">
+  <text x="10" y="20" font-weight="700">Energy over 7 simulated days (kWh) — lower is better</text>
+  <g>
+    <text x="200" y="58" text-anchor="end">Static 22 °C schedule</text>
+    <rect x="210" y="44" width="433" height="22" fill="#b9b8b0"/><text x="650" y="60">722.4</text>
+    <text x="200" y="98" text-anchor="end">Reactive thermostat 24 °C</text>
+    <rect x="210" y="84" width="296" height="22" fill="#b9b8b0"/><text x="513" y="100">493.4</text>
+    <text x="200" y="138" text-anchor="end" font-weight="700" fill="#2a78d6">FeelsLike (constraint-aware)</text>
+    <rect x="210" y="124" width="318" height="22" fill="#2a78d6"/><text x="535" y="140" font-weight="700" fill="#2a78d6">530.3</text>
+    <text x="200" y="178" text-anchor="end">PPO reinforcement learning</text>
+    <rect x="210" y="164" width="308" height="22" fill="#d6d5ce"/><text x="525" y="180">512.7</text>
+  </g>
+  <text x="10" y="225" fill="#4a4a46">Comfort violation-minutes:  static 16,328  ·  reactive 429  ·  </text>
+  <text x="385" y="225" fill="#1f7a3a" font-weight="700">FeelsLike 0</text>
+  <text x="470" y="225" fill="#4a4a46">  ·  PPO 22</text>
+</svg>
+<div class="cap">Figure 4. The headline comparison. Bar lengths are to scale.</div>
+</div>
+<table>
+  <tr><th>Controller</th><th class="n">kWh</th><th class="n">₹ (flat ₹9/kWh)</th><th class="n">kg CO₂</th><th class="n">Violation-min</th><th class="n">Energy saved</th></tr>
+  <tr><td>Static 22 °C schedule — what buildings do today</td><td class="n">722.4</td><td class="n">6,502</td><td class="n">512.9</td><td class="n">16,328</td><td class="n">—</td></tr>
+  <tr><td>Reactive thermostat at 24 °C</td><td class="n">493.4</td><td class="n">4,441</td><td class="n">350.3</td><td class="n">429</td><td class="n">31.7%</td></tr>
+  <tr class="lead"><td>FeelsLike (constraint-aware)</td><td class="n">530.3</td><td class="n">4,773</td><td class="n">376.5</td><td class="n">0</td><td class="n">26.6%</td></tr>
+  <tr><td>FeelsLike with PPO agent</td><td class="n">512.7</td><td class="n">4,614</td><td class="n">364.0</td><td class="n">22</td><td class="n">29.0%</td></tr>
+</table>
+<h2>How to read it</h2>
+<ul>
+  <li><b>The static schedule wastes energy and still fails people:</b> 16,328 violation-minutes, almost all of them
+  <i>over-cooling</i> — rooms colder than 23 °C while occupied.</li>
+  <li><b>A warmer dumb thermostat saves the most energy but breaks comfort:</b> 31.7% saved, with 429 minutes of people
+  too hot. This is the tempting wrong answer.</li>
+  <li><b>FeelsLike saves 26.6% with zero violations.</b> It gives up about 5 points of savings versus the reactive
+  thermostat to deliver comfort — that trade is the entire thesis: <b>efficiency without sacrifice</b>.</li>
+</ul>
+<div class="box amber"><span class="t">Say "in simulation"</span>
+Zero violations holds because the simulated cooling capacity is adequate and the thermostat model is idealised. Both
+sides of the race share that idealisation, so the <i>comparison</i> is fair — but a real building would not hit exactly zero.
+The feasibility maths deliberately assumes only 25% of these savings survive in reality (Section 17).</div>
+<p>These four numbers are <b>frozen</b>: an automated check re-runs the week after every change, and the project refuses any
+change that moves them.</p>
+
+<!-- ============================================================ 10 -->
+<h1><span class="num">10</span>Comfort memory</h1>
+<p>Some discomfort is predictable. If Conference Room B gets stuffy every afternoon, why wait for someone to complain?</p>
+<ol>
+  <li>The memory scans real occupant complaints (never its own actions) for the same <b>zone + issue</b> reported on
+  <b>at least 2 different days</b> at a similar time (within <b>±1 hour</b>).</li>
+  <li>Thirty minutes before that usual time, it pre-applies a <b>gentle</b> constraint — severity 1, confidence 0.5 — so the
+  fix is small.</li>
+  <li>It announces the action in the feed: <i>"zone_b usually reports stuffy around 14:00 — pre-applying a gentle fix."</i></li>
+  <li>If people already complained that day, it doesn't double up.</li>
+</ol>
+<p>This turns a reactive system into a slightly anticipatory one, while staying transparent and bounded by the same envelope.</p>
+
+<!-- ============================================================ 11 -->
+<h1><span class="num">11</span>Explain, What-if, Maintenance, Analytics</h1>
+<h2>Explainability: "Why did the system change this?"</h2>
+<p>Every material decision is logged as a structured record — never free-form AI text. A record holds the zone, the old and new
+setpoint and fan, what the plain schedule would have done, the occupancy, indoor and outdoor temperature, humidity, every
+constraint that contributed with its current weight, whether there was a conflict, the objective and safety mode in force, an
+estimated energy change and comfort change, a one-line human summary, and a <span class="mono">reason_code</span> from a fixed
+vocabulary (e.g. <span class="mono">precool</span>, <span class="mono">setback</span>, <span class="mono">constraint_applied</span>,
+<span class="mono">conflict_compromise</span>, <span class="mono">clamped</span>, <span class="mono">at_capacity</span>). The log keeps the
+last 500 and only records decisions that actually differ from the previous one for that zone.</p>
+<h2>What-if: counterfactuals that can't break the live building</h2>
+<p>An operator can ask questions like "what if occupancy rises 20%?". The engine takes a <b>clone</b> of the live twin and
+complaint store, applies the change, runs both the unchanged clone and the changed clone forward over the same horizon and
+weather seeds, and reports the difference with mean, spread and a 95% confidence interval across seeds. Results are labelled
+<i>measured</i> because the physics really ran. A fingerprint of the live state is checked before and after to prove nothing
+leaked. Eleven scenarios are built in:</p>
+<table>
+  <tr><td>Setpoint +1 °C</td><td>Setpoint −1 °C</td><td>Occupancy +20%</td><td>Occupancy −20%</td></tr>
+  <tr><td>Heat wave +3 °C</td><td>Monsoon +15 %RH</td><td>Cooling capacity 70%</td><td>Ignore all complaints</td></tr>
+  <tr><td>Complaints already expired</td><td>Objective: save energy</td><td>Objective: maximise comfort</td><td></td></tr>
+</table>
+<h2>Maintenance: faults from evidence, not guesses</h2>
+<p>Four detectors watch the building: <b>capacity</b> (a unit pinned at 100% while its room stays hot), <b>sensor</b>
+(stuck, missing or impossible readings), <b>actuator</b> (a commanded change that produces no effect) and <b>recurring</b>
+(the same complaint again and again). None fires on a single bad reading — each needs sustained evidence (30–45 simulated
+minutes, with a short grace window) and quotes that evidence verbatim with numbers. Alerts are advisory: they never change
+control, except that a capacity alert locks its zone so the controller stops demanding cooling the unit cannot give.</p>
+<h2>Analytics</h2>
+<p>A bounded rolling sampler (every 15 simulated minutes) feeds a zone-by-hour comfort heatmap (occupied samples only, so an
+empty room at 3 a.m. is grey, not red), hourly and per-zone energy, complaint statistics (latency, confidence, clarification
+rate, by issue and zone) and controller activity (interventions, conflicts, clamps).</p>
+
+<!-- ============================================================ 12 -->
+<h1><span class="num">12</span>The Monitor tab, real data and pricing</h1>
+<p>The Monitor tab is the building-operator view: a zone selector, time windows from live to 7 days, 13 KPI cards, 9 charts with
+crosshair tooltips, click-to-drill-down, and an alerts table. Its defining rule is that <b>every value carries a badge saying where
+it came from</b>:</p>
+<table>
+  <tr><th style="width:18%">Badge</th><th>Meaning</th><th style="width:34%">Examples</th></tr>
+  <tr><td><b>SIM</b></td><td>The digital twin's own state</td><td>zone temperatures, occupancy, kWh</td></tr>
+  <tr><td><b>DERIVED</b></td><td>Computed from twin state by a documented formula</td><td>estimated CO₂, comfort score, power</td></tr>
+  <tr><td><b>HARDWARE</b></td><td>A real sensor on the bench</td><td>the ESP32 rig's temperature and humidity</td></tr>
+  <tr><td><b>REAL</b></td><td>A live external feed</td><td>Open-Meteo outdoor weather and air quality for VIT Chennai</td></tr>
+  <tr><td><b>HISTORICAL</b></td><td>A published dataset, not this building</td><td>UCI Occupancy Detection (office in Belgium, Feb 2015)</td></tr>
+  <tr><td><b>PREDICTED</b></td><td>The same controller run forward on clones</td><td>short-horizon forecast</td></tr>
+</table>
+<ul>
+  <li><b>CO₂ is estimated, and says so</b>: it uses the ASHRAE 62.1 single-zone mass balance with the twin's own ventilation
+  and leakage rates. It is not a sensor reading.</li>
+  <li><b>Comfort score</b> (0–100) is a documented heuristic and is explicitly <i>not</i> the ASHRAE PMV comfort index.</li>
+  <li><b>Thresholds</b> for Normal / Warning / Critical come from one server-side table citing ASHRAE 55 and 62.1, WHO 2021
+  and EN 12464-1.</li>
+  <li><b>Noise</b> shows "not instrumented" because nothing in the system measures it — no number is invented.</li>
+  <li>Simulated time and real wall-clock time are never drawn on the same axis.</li>
+</ul>
+<h2>Time-of-day electricity pricing (display only)</h2>
+<p>The verified Tamil Nadu commercial tariff (TANGEDCO LT-V, TNERC Order 6/2025) is ₹10.45/kWh at the margin, <b>+25%</b> in peak
+hours (06–10 and 18–22) and <b>−5%</b> at night (22–05). The dashboard re-prices the <i>same measured energy</i> at that tariff.
+The controller does <b>not</b> yet shift cooling to cheap hours — doing so would change energy use and invalidate the frozen
+results — so this view is labelled display-only.</p>
+
+<!-- ============================================================ 13 -->
+<h1><span class="num">13</span>Reinforcement learning — and why it isn't shipped</h1>
+<p>Reinforcement learning (RL) trains an agent by trial and error to maximise a reward. Here the reward penalises energy,
+discomfort and unmet complaints. The team trained a <b>PPO</b> agent (a standard RL algorithm) for <b>2 million steps</b>;
+its average reward improved from −91.8 to −86.8 and was still climbing when training stopped.</p>
+<table>
+  <tr><th>Comparison</th><th class="n">PPO agent</th><th class="n">Shipped rules controller</th></tr>
+  <tr><td>10 random single days — kWh per day</td><td class="n">81.6</td><td class="n">84.4</td></tr>
+  <tr><td>10 random single days — violation-min per day</td><td class="n">2</td><td class="n">0</td></tr>
+  <tr><td>7-day week — energy saved</td><td class="n">29.0%</td><td class="n">26.6%</td></tr>
+  <tr><td>7-day week — violation-minutes</td><td class="n">22</td><td class="n">0</td></tr>
+</table>
+<div class="box"><span class="t">The decision (milestone M4)</span>
+PPO saves slightly more energy but breaks the zero-violation result. Since "efficiency without sacrifice" is the whole point,
+the demo ships the explainable rules-based controller, and RL is shown honestly in the Experiments tab as a learning trajectory
+next to the measured comparison. A longer training run could change this decision; it would be re-measured, not assumed.</div>
+
+<!-- ============================================================ 14 -->
+<h1><span class="num">14</span>The honesty machinery</h1>
+<p>A claim is only as good as the process behind it. The project is built so that numbers cannot quietly drift or be inflated.</p>
+<h2>1 · The rotating blind probe</h2>
+<p>A test set stops being a fair test the moment you study its failures and fix them. The team caught this happening: after a
+parser rewrite the held-out split jumped from 55% to 100%, while a fresh set of 20 unseen sentences (probe v1) scored only 50%.
+Later, when probe v1's own failures were studied to guide fixes, <b>probe v1 was declared "burned"</b>: archived with the story written
+into it, and its later 80% re-score disowned. A new <b>probe v2</b> was written after all development, with the answers committed
+before measuring, and run exactly once per parser. The scoring script now <b>refuses</b> to run on a probe marked burned. That is
+why the quoted numbers are 45% / 55% — lower, but real.</p>
+<h2>2 · Frozen headline numbers</h2>
+<p>722.4 / 493.4 / 530.3 kWh and 16,328 / 429 / 0 violation-minutes are re-computed by tests and by a one-command pre-flight
+check. Any change that moves them is treated as a bug until proven otherwise.</p>
+<h2>3 · The capability gate</h2>
+<p>The presentation deck and reports are regenerated by scripts from the result files, so a number can't be typed into a slide
+and drift from the code. Claims about features (multi-zone, explainability, what-if, hardware, calibration, and others — 11 flags)
+are only written into the documents after the team has personally verified that feature. As of this document every flag is
+still off.</p>
+<h2>4 · Tests</h2>
+<p><b>534 automated tests pass.</b> They cover data contracts between modules, the parser, constraint maths, thermal physics,
+controller safety under abuse, simulator determinism (same seed → bit-identical results), what-if isolation, the HTTP API
+including concurrency, the hardware bridge and its safety envelope, calibration, pricing, telemetry, and the ambient sensor node.</p>
+<h2>5 · Labels everywhere</h2>
+<p>Source badges on every dashboard value; <i>measured</i> vs <i>predicted</i> on every what-if result; a baked-in
+"SYNTHETIC SELF-TEST — NOT HARDWARE DATA" banner on calibration charts made from synthetic data; "uncalibrated" on sensor readings
+that haven't been cross-checked; and a written limitations register.</p>
+<h2>6 · AI used as an enabler, disclosed</h2>
+<p>The LLM is one measured component with an offline fallback. The feed marks every message that used external AI, and the
+privacy panel describes exactly what is sent. Physics, control, safety limits, the evaluation policy and the hardware design
+are engineering decisions the team owns and can defend.</p>
+
+<!-- ============================================================ 15 -->
+<h1><span class="num">15</span>The hardware: a real zone in the loop</h1>
+<p>The round-1 jury asked for more hardware. FeelsLike now has a physical "shoebox zone" that mirrors <b>Conference Room B</b>.</p>
+<h2>What is on the bench</h2>
+<table>
+  <tr><th style="width:24%">Part</th><th>Role</th><th style="width:20%">State</th></tr>
+  <tr><td>ESP32 dev board</td><td>Wi-Fi microcontroller; reads the sensor, drives the outputs, talks to the server. Classic ESP32 (ESP32-D0WD-V3) with a CP2102 USB chip.</td><td><span class="tag done">VERIFIED</span></td></tr>
+  <tr><td>DHT22 sensor (GPIO 4)</td><td>Real temperature and humidity</td><td><span class="tag done">VERIFIED</span></td></tr>
+  <tr><td>Blue LED (GPIO 16)</td><td>Stands in for the fan: off / dim / bright = fan 0 / 1 / 2</td><td><span class="tag done">VERIFIED</span></td></tr>
+  <tr><td>Red LED (GPIO 17)</td><td>Stands in for the calibration heater</td><td><span class="tag done">VERIFIED</span></td></tr>
+  <tr><td>L9110 driver, toggle switch, fuse</td><td>The power stage that would run a real fan and heater, with a physical kill switch</td><td><span class="tag paused">PAUSED</span> — no fan yet; fuse rating unreadable</td></tr>
+  <tr><td>Arduino Uno + LM35</td><td>A second, wired sensor node measuring room air (Section 15.5)</td><td><span class="tag built">BUILT</span> — not yet run</td></tr>
+</table>
+<h2>How it talks to the server</h2>
+<div class="fig">
+<svg viewBox="0 0 720 200" width="720" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif" font-size="12">
+  <defs><marker id="d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#4a4a46"/></marker></defs>
+  <rect x="10" y="40" width="200" height="110" rx="10" fill="#fff5f4" stroke="#c0392b"/>
+  <text x="110" y="64" text-anchor="middle" font-weight="700">ESP32 node</text>
+  <text x="110" y="84" text-anchor="middle" fill="#4a4a46">reads DHT22 every 2 s</text>
+  <text x="110" y="102" text-anchor="middle" fill="#4a4a46">drives fan / heater pins</text>
+  <text x="110" y="120" text-anchor="middle" fill="#4a4a46">10 s watchdog</text>
+  <line x1="215" y1="75" x2="500" y2="75" stroke="#4a4a46" stroke-width="1.5" marker-end="url(#d)"/>
+  <text x="357" y="66" text-anchor="middle">POST /api/hw/reading  {temp_c, rh_pct, seq, uptime_s}</text>
+  <line x1="500" y1="118" x2="215" y2="118" stroke="#2a78d6" stroke-width="1.5" marker-end="url(#d)"/>
+  <text x="357" y="140" text-anchor="middle" fill="#2a78d6">reply  {ok, fan, heater, watchdog_s, poll_s}</text>
+  <rect x="505" y="40" width="205" height="110" rx="10" fill="#eef4fd" stroke="#2a78d6"/>
+  <text x="607" y="64" text-anchor="middle" font-weight="700">FeelsLike server</text>
+  <text x="607" y="84" text-anchor="middle" fill="#4a4a46">controller writes zone B's fan</text>
+  <text x="607" y="102" text-anchor="middle" fill="#4a4a46">through the adapter seam</text>
+  <text x="607" y="120" text-anchor="middle" fill="#4a4a46">heater duty cap 50%/10 min</text>
+  <text x="360" y="185" text-anchor="middle" fill="#7c7b75">One moving part: commands ride back on the reply to each reading. Plain HTTP over a phone hotspot — no broker to fail on stage.</text>
+</svg>
+<div class="cap">Figure 5. The rig's wire protocol.</div>
+</div>
+<ul>
+  <li><b>Same controller, same seam.</b> The rig is reached through the same adapter interfaces a real BACnet or Modbus building
+  would use, and its adapters pass the exact conformance test the simulated ones pass. There is no special-case code path.</li>
+  <li><b>The twin is never overwritten by the real sensor.</b> Doing so would make the A/B race unfair and quietly change the
+  headline numbers. Real readings are displayed, health-checked and logged for calibration instead.</li>
+  <li><b>Honest capabilities.</b> The rig has a fan but no cooling unit, so a setpoint command to it is <i>rejected and logged</i>
+  ("rig is vent-only"), never faked.</li>
+</ul>
+<h2>Three independent safety layers</h2>
+<div class="fig">
+<svg viewBox="0 0 700 170" width="700" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif" font-size="12">
+  <rect x="10" y="15" width="220" height="140" rx="10" fill="#fdf6f5" stroke="#c0392b"/>
+  <text x="120" y="40" text-anchor="middle" font-weight="700">Layer 0 · Hardware</text>
+  <text x="120" y="62" text-anchor="middle" fill="#4a4a46">toggle switch in the</text>
+  <text x="120" y="78" text-anchor="middle" fill="#4a4a46">actuator power line</text>
+  <text x="120" y="102" text-anchor="middle" fill="#4a4a46">assumes nothing</text>
+  <text x="120" y="135" text-anchor="middle" fill="#b7791f" font-weight="700">not yet tested</text>
+  <rect x="240" y="15" width="220" height="140" rx="10" fill="#f5fbf6" stroke="#1f7a3a"/>
+  <text x="350" y="40" text-anchor="middle" font-weight="700">Layer 1 · Firmware</text>
+  <text x="350" y="62" text-anchor="middle" fill="#4a4a46">no good reply for 10 s</text>
+  <text x="350" y="78" text-anchor="middle" fill="#4a4a46">→ fan and heater off</text>
+  <text x="350" y="102" text-anchor="middle" fill="#4a4a46">assumes the firmware runs</text>
+  <text x="350" y="135" text-anchor="middle" fill="#1f7a3a" font-weight="700">verified twice</text>
+  <rect x="470" y="15" width="220" height="140" rx="10" fill="#f5fbf6" stroke="#1f7a3a"/>
+  <text x="580" y="40" text-anchor="middle" font-weight="700">Layer 2 · Server</text>
+  <text x="580" y="62" text-anchor="middle" fill="#4a4a46">heater ≤ 50% of any 10 min;</text>
+  <text x="580" y="78" text-anchor="middle" fill="#4a4a46">fan clamped 0–2; audit log</text>
+  <text x="580" y="102" text-anchor="middle" fill="#4a4a46">assumes the network works</text>
+  <text x="580" y="135" text-anchor="middle" fill="#1f7a3a" font-weight="700">verified</text>
+</svg>
+<div class="cap">Figure 6. Each layer covers the failure the one above it cannot.</div>
+</div>
+<h2>15.4 · What was verified on the bench (15 Sep 2026)</h2>
+<ul>
+  <li><b>Sensing:</b> the node posted every ~2 s with every request accepted, reading about 30.5–31.2 °C and 77–80% humidity, sensor health clean.</li>
+  <li><b>Control loop:</b> "it is really stuffy in conference room b" → parsed by the LLM → the controller raised zone B's fan → the ESP32 echoed <span class="mono">fan=1</span> within 2 seconds → the blue LED lit.</li>
+  <li><b>Layer 2:</b> the heater was requested on; once it reached 50% duty the server forced it off (<span class="mono">duty_limited: true</span>) and the red LED went dark.</li>
+  <li><b>Layer 1:</b> the server was killed; the blue LED switched off on its own within the 10-second watchdog; when the server came back the node reconnected and the LED relit. Done twice and seen by eye.</li>
+</ul>
+<h2>15.5 · The wired ambient node (built, not yet run)</h2>
+<p>An Arduino Uno with an LM35 temperature sensor will measure the room air <i>around</i> the rig and send it over a USB cable,
+not Wi-Fi — the same shape as the wired RS-485/Modbus sensor buses in real buildings. A small bridge script forwards its readings.
+It posts to a separate, sensor-only endpoint whose reply can never contain a command and which can never overwrite the rig's
+reading (a test proves this). The Uno's internal voltage reference varies by up to ±10% between chips (about ±3 °C), so its readings
+are labelled <b>uncalibrated</b> until cross-checked against the DHT22 with a provided script. <span class="tag paused">PAUSED</span> until after the intermediate review.</p>
+<div class="box"><span class="t">Rehearsal without hardware</span>
+<span class="mono">python -m scripts.mock_node</span> runs a software ESP32 that behaves exactly like the firmware (including the watchdog)
+around a simulated box. The whole loop can be demonstrated even if the physical rig fails on stage — and it is presented as exactly that.</div>
+
+<!-- ============================================================ 16 -->
+<h1><span class="num">16</span>Calibration: making the twin match reality</h1>
+<p>A digital twin is only as good as its parameters. The strongest possible evidence is: <i>"we measured a real box and fitted
+our model to it, and here is the overlay of measured versus modelled temperature."</i></p>
+<h2>How it works</h2>
+<ol>
+  <li>A small heater of known power warms the closed box for a set time, then switches off, while the sensor logs temperature every 2 s.</li>
+  <li>The fitting script (<span class="mono">scripts/fit_rc.py</span>) searches for the insulation R and heat capacity C that make the
+  RC model reproduce that temperature curve (least squares), using the heater's recorded on/off timeline.</li>
+  <li>It produces a measured-vs-model chart for the deck, plus the fit quality.</li>
+</ol>
+<h2>What is proven so far</h2>
+<ul>
+  <li>On synthetic data with known true values the fitter recovers R and C to within about 0.5%.</li>
+  <li>An end-to-end test runs the whole hardware pipeline in software — including the server's 50% heater duty cap chopping the heating
+  into on/off pulses — and still recovers R and C within 10%.</li>
+  <li><span class="mono">scripts/run_calibration.py</span> drives a real run with one command (about 65 minutes).</li>
+</ul>
+<div class="box amber"><span class="t">Status: <span class="tag paused">PAUSED</span> — needs a heater</span>
+The fit needs a heater of known wattage (for example a 10 Ω 10 W resistor on 5 V, or 47 Ω 10 W on 12 V). Until one is bought,
+no calibration result is claimed. Any chart made from synthetic data carries a permanent "NOT HARDWARE DATA" banner.</div>
+
+<!-- ============================================================ 17 -->
+<h1><span class="num">17</span>Is it feasible? Cost, deployment, payback</h1>
+<h2>What one zone and one floor cost</h2>
+<table>
+  <tr><th>Item</th><th class="n">₹</th><th>Basis</th></tr>
+  <tr><td>One sensor node (ESP32, SHT31 sensor, PIR occupancy, IR blaster, power and enclosure)</td><td class="n">≈ 1,050</td><td>retailer prices checked</td></tr>
+  <tr><td>20 nodes</td><td class="n">21,000–22,000</td><td></td></tr>
+  <tr><td>Gateway: Raspberry Pi 4 (or the building's existing PC at ₹0)</td><td class="n">6,449</td><td>retailer price</td></tr>
+  <tr><td>Installation and commissioning (₹500/zone)</td><td class="n">10,000</td><td>estimate</td></tr>
+  <tr><td>Spares (10%)</td><td class="n">2,100</td><td>estimate</td></tr>
+  <tr class="lead"><td>A 20-zone office floor (~2,000 m²)</td><td class="n">≈ 40,000</td><td></td></tr>
+</table>
+<h2>Two ways to install it</h2>
+<div class="two">
+<div>
+<h3>No building-management system (most Indian offices)</h3>
+<p>Sensor nodes plus <b>IR blasters</b> that send the same codes as the split-AC's remote (setpoint, mode, fan, on/off), and optional
+smart plugs. Honest limits: IR is one-way (the temperature trend acts as confirmation), split ACs change in 1 °C steps, and central
+plant such as air-handling dampers is out of reach.</p>
+</div>
+<div>
+<h3>Buildings with a BMS (BACnet or Modbus)</h3>
+<p>The controller's three calls — read state, write setpoint, write fan — map to standard points: per zone, five readings
+(temperature, humidity, CO₂, occupancy) and two writable points (cooling setpoint, fan speed). A systems integrator maps those points
+and runs the same conformance test the simulated and hardware adapters already pass.</p>
+</div>
+</div>
+<h2>Payback, with every assumption labelled</h2>
+<ul>
+  <li><b>Measured:</b> 192.1 kWh saved over 7 simulated days on the 520 m² model.</li>
+  <li><b>Assumption:</b> every week is like that hot week → 10,016 kWh/yr on 520 m², scaled linearly to 40,065 kWh/yr for a 20-zone floor.</li>
+  <li><b>Verified tariff:</b> TANGEDCO LT-V commercial, ₹10.45/kWh at the margin.</li>
+  <li><b>Assumption, the big one:</b> how much of the simulated saving survives in a real building. We show 100%, 50% and 25% —
+  and <b>defend only 25%</b>.</li>
+</ul>
+<table>
+  <tr><th>Savings realised ↓ · Tariff →</th><th class="n">₹7.84 (−25%)</th><th class="n">₹10.45</th><th class="n">₹13.06 (+25%, peak)</th></tr>
+  <tr><td>100% of simulated</td><td class="n">1.5 months</td><td class="n">1.1</td><td class="n">0.9</td></tr>
+  <tr><td>50%</td><td class="n">3.0</td><td class="n">2.3</td><td class="n">1.8</td></tr>
+  <tr class="lead"><td>25% — the defended case</td><td class="n">6.0</td><td class="n">4.5</td><td class="n">3.6</td></tr>
+</table>
+<p>Even at a quarter of the simulated savings and a tariff 25% lower, the ₹40k floor pays back in about six months.
+Carbon: 0.710 kg CO₂ per kWh (Central Electricity Authority database v21.0) → about 7.1 tonnes CO₂ a year per floor in the defended case.</p>
+
+<!-- ============================================================ 18 -->
+<h1><span class="num">18</span>Limitations we state openly</h1>
+<table>
+  <tr><th style="width:4%">#</th><th style="width:30%">Limitation</th><th>What we do about it</th></tr>
+  <tr><td>1</td><td>The RC model ignores air currents between rooms, radiant heat and stratification; the thermostat is idealised</td><td>Only 25% of simulated savings are defended; hardware calibration exists to shrink that gap with evidence; "in simulation" is said aloud</td></tr>
+  <tr><td>2</td><td>Humidity is tracked but not charged to energy; simulated indoor humidity reads unrealistically high (~90%) because of a simplified coil approximation</td><td>A documented modelling choice that keeps the A/B comparison valid; the Monitor tab labels humidity a model limitation rather than hiding it; the fix is one constant and a team decision</td></tr>
+  <tr><td>3</td><td>Parser exact accuracy 45% (rules) / 55% (LLM) on unseen messages</td><td>Zone accuracy 90% with no invented rooms; ask-don't-guess; small, fading, clamped offsets; failures published</td></tr>
+  <tr><td>4</td><td>Sensors drift or die</td><td>Health is inferred (stale, stuck, out of range, impossible); a dead zone falls back to its schedule</td></tr>
+  <tr><td>5</td><td>IR control is one-way; relays wear</td><td>Solid-state switching for the fan; a command that changes nothing raises a maintenance alert</td></tr>
+  <tr><td>6</td><td>Network loss</td><td>Node watchdog turns actuators off within 10 s; the zone degrades to today's plain behaviour, never worse</td></tr>
+  <tr><td>7</td><td>One gateway is a single point of failure</td><td>Stateless nodes and a cheap cold spare; the building reverts to its existing schedule</td></tr>
+  <tr><td>8</td><td>Scale beyond one floor</td><td>Fine for a floor today; multi-floor needs a database-backed store and per-floor processes (designed, not built)</td></tr>
+  <tr><td>9</td><td>Time-of-day pricing not exploited</td><td>Shown as display-only; optimising it would need re-measuring the headline results</td></tr>
+  <tr><td>10</td><td>Zero violations is a simulation result</td><td>Both sides of the race share the idealisation, so the comparison is fair; not claimed for real buildings</td></tr>
+</table>
+
+<!-- ============================================================ 19 -->
+<h1><span class="num">19</span>The dashboard, tab by tab</h1>
+<p>Open <span class="mono">http://127.0.0.1:8000</span> after starting the server. A permanent badge states that the building is simulated.
+The top row holds the presenter's path; the second row holds depth for judges who want to dig in.</p>
+<table>
+  <tr><th style="width:18%">Tab</th><th>What it shows</th></tr>
+  <tr><td><b>Overview</b></td><td>The live race: energy bars and saved % for FeelsLike vs the dumb twin, comfort violations, money and CO₂ tiles, floor plan with each zone's temperature, setpoint, fan and conflicts, and the complaint chat and feed.</td></tr>
+  <tr><td><b>Monitor</b></td><td>Operator view with source-badged KPI cards, charts, drill-down, alerts, and the physical-zone card showing the real sensor.</td></tr>
+  <tr><td><b>Live twin</b></td><td>Condition sliders (outdoor temperature, sun, humidity, occupancy, capacity), zone states, and the hardware rig card with measured-vs-twin chart and heater control.</td></tr>
+  <tr><td><b>Explain</b></td><td>The decision log — open any record to see exactly why a setpoint changed.</td></tr>
+  <tr><td><b>What-if</b></td><td>Run a counterfactual scenario on clones and compare baseline vs scenario with confidence intervals.</td></tr>
+  <tr><td><b>Demo</b></td><td>A guided script (Start / Next / Previous / Reset) that drives real state through the whole story in 2–4 minutes.</td></tr>
+  <tr><td>Complaints</td><td>Active and pending constraints, approve or reject.</td></tr>
+  <tr><td>Control</td><td>Objective, safety mode and zone locks.</td></tr>
+  <tr><td>Analytics</td><td>Comfort heatmap, energy series, complaint and controller statistics, time-of-day tariff view.</td></tr>
+  <tr><td>Maintenance</td><td>Active and resolved alerts with their numeric evidence.</td></tr>
+  <tr><td>Experiments</td><td>RL learning curve with the measured comparison, and the saved multi-seed what-if sweep.</td></tr>
+  <tr><td>Settings</td><td>AI disclosure, anonymity default, data retention, data export and redaction.</td></tr>
+</table>
+<p>Complaints also arrive through <b>Slack or Microsoft Teams</b> (<span class="mono">POST /api/slack</span>) and a phone-sized occupant page.</p>
+
+<!-- ============================================================ 20 -->
+<h1><span class="num">20</span>How the code is organised and how to run it</h1>
+<h2>The main parts</h2>
+<table>
+  <tr><th style="width:32%">Path</th><th>Responsibility</th></tr>
+  <tr><td class="mono">sim/twin.py</td><td>The 5-zone RC digital twin: physics, energy, comfort, humidity</td></tr>
+  <tr><td class="mono">sim/controllers.py</td><td>Static, reactive, constraint-aware and RL controllers; the safety envelope</td></tr>
+  <tr><td class="mono">backend/parser.py</td><td>Complaint → structured JSON (LLM + rules)</td></tr>
+  <tr><td class="mono">backend/constraints.py</td><td>Decay, arbitration, explanations</td></tr>
+  <tr><td class="mono">backend/memory.py</td><td>Comfort memory</td></tr>
+  <tr><td class="mono">backend/decisions.py · whatif.py · maintenance.py · analytics.py</td><td>Explainability, counterfactuals, fault detection, analytics</td></tr>
+  <tr><td class="mono">backend/telemetry.py · external.py · tariff.py</td><td>Monitor data, real and historical feeds, time-of-day pricing</td></tr>
+  <tr><td class="mono">backend/hardware.py · adapters.py</td><td>The hardware bridge, sensor-only nodes and the adapter seam</td></tr>
+  <tr><td class="mono">backend/app.py</td><td>The FastAPI server: live simulation loop, all endpoints, dashboard</td></tr>
+  <tr><td class="mono">dashboard/</td><td>Single-page dashboard with no build step; works offline</td></tr>
+  <tr><td class="mono">hardware/</td><td>ESP32 and Uno firmware, wiring, safety model, bring-up runbook</td></tr>
+  <tr><td class="mono">evals/ · rl/ · scripts/ · tests/</td><td>Benchmarks and blind probe, RL training, tools, 534 tests</td></tr>
+  <tr><td class="mono">docs/</td><td>Deck, reports, feasibility pack, presentation script, this document</td></tr>
+</table>
+<h2>Run it</h2>
+<pre>py -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+
+python -m scripts.demo_day                                  the 7-day evidence table
+python -m evals.run_nlp_eval --rules                        the NLP benchmark, offline
+python -m evals.run_blind_probe --rules                     the blind probe
+python -m pytest tests -q                                   534 tests
+python -m scripts.preflight                                 one-command pre-demo checklist
+python -m uvicorn backend.app:app --host 0.0.0.0            the live dashboard on port 8000
+python -m scripts.mock_node                                 a software ESP32, for rehearsal</pre>
+<p>No API key is required: without one, the offline rules parser keeps everything working. The <span class="mono">--host 0.0.0.0</span> flag is only
+needed when a real ESP32 must reach the laptop over Wi-Fi.</p>
+<h2>Licence</h2>
+<p>Code: Apache-2.0 or MIT, at the user's choice. Documentation: CC BY 4.0. Bundled third-party data keeps its own CC BY 4.0 licence and
+attribution (see <span class="mono">NOTICE</span>). If the hackathon's rules require different terms, those rules apply.</p>
+
+<!-- ============================================================ 21 -->
+<h1><span class="num">21</span>Where the project stands today</h1>
+<table>
+  <tr><th style="width:48%">Item</th><th style="width:20%">State</th><th>Note</th></tr>
+  <tr><td>Digital twin, parser, constraints, controller, safety envelope</td><td><span class="tag done">VERIFIED</span></td><td>tests + frozen numbers</td></tr>
+  <tr><td>7-day A/B result (26.6% saved, 0 violations)</td><td><span class="tag done">VERIFIED</span></td><td>reproducible, in simulation</td></tr>
+  <tr><td>Comfort memory, multi-zone complaints, conflicts, retractions</td><td><span class="tag done">VERIFIED</span></td><td>tests</td></tr>
+  <tr><td>Explain, What-if, Maintenance, Analytics, Monitor, pricing view</td><td><span class="tag done">VERIFIED</span></td><td>API tests and live checks</td></tr>
+  <tr><td>RL agent trained and compared</td><td><span class="tag done">VERIFIED</span></td><td>not shipped as controller, by decision</td></tr>
+  <tr><td>Blind probe v2 NLP scores</td><td><span class="tag done">VERIFIED</span></td><td>45% / 55% exact, 90% zones</td></tr>
+  <tr><td>Real ESP32 + DHT22 sensing, control loop, watchdog, duty cap</td><td><span class="tag done">VERIFIED</span></td><td>on the bench, LEDs as actuators</td></tr>
+  <tr><td>Feasibility pack: costs, deployment paths, payback, limitations</td><td><span class="tag done">VERIFIED</span></td><td>assumptions labelled</td></tr>
+  <tr><td>Uno + LM35 wired ambient node</td><td><span class="tag built">BUILT</span></td><td>code and tests done; paused until after intermediate review</td></tr>
+  <tr><td>Physical kill switch (safety layer 0) with L9110 power stage</td><td><span class="tag paused">PAUSED</span></td><td>no fan yet; fuse rating unreadable</td></tr>
+  <tr><td>Real fan and heater</td><td><span class="tag no">NOT DONE</span></td><td>power supply and heater to buy</td></tr>
+  <tr><td>Hardware calibration overlay</td><td><span class="tag no">NOT DONE</span></td><td>tools built and tested; needs the heater</td></tr>
+  <tr><td>Capability flags flipped, deck slides for hardware/feasibility</td><td><span class="tag no">NOT DONE</span></td><td>only after team verification</td></tr>
+  <tr><td>Backup demo video, timed rehearsals</td><td><span class="tag no">NOT DONE</span></td><td></td></tr>
+</table>
+<div class="box green"><span class="t">What to say about hardware today, accurately</span>
+"We have one real zone in the loop: a real sensor, and a real closed loop from a typed complaint to a physical output within two seconds,
+protected by a firmware watchdog and a server duty cap that we tested. The outputs are indicator LEDs today; the fan and heater stage is next."</div>
+
+<!-- ============================================================ 22 -->
+<h1><span class="num">22</span>Questions a judge will ask</h1>
+<dl class="qa">
+  <dt>How do you stop the AI from hallucinating a dangerous command?</dt>
+  <dd>The AI never writes a setpoint. It only produces a small structured label that is validated against a schema; unknown zones are erased;
+  missing zones trigger a question; and every resulting offset is clamped to ±1.8 K and the setpoint to 21.5–29.0 °C. If the AI fails,
+  the offline parser answers.</dd>
+  <dt>Isn't 45–55% parse accuracy low?</dt>
+  <dd>It's the exact-everything score on unseen, deliberately hard sentences, measured once. Zone accuracy is 90% with no invented rooms, the
+  system asks when unsure, and a wrong issue causes only a small offset that fades within two hours. We quote the hard number on purpose.</dd>
+  <dt>What happens when two people disagree?</dt>
+  <dd>Both complaints count, weighted by severity, confidence and recency; the zone is flagged CONFLICT with an explanation, and the compromise
+  shifts as the complaints fade.</dd>
+  <dt>How real is the digital twin?</dt>
+  <dd>It's a standard lumped RC thermal model with envelope loss, sun by facade, people, ventilation, shared walls and finite capacity. Its
+  parameters can be fitted to a real room, and we built and tested the tools to do that with our hardware.</dd>
+  <dt>Why not just use occupancy sensors and a timer?</dt>
+  <dd>That handles empty rooms, which our schedule also does. It can't hear that an occupied room is uncomfortable right now, and it can't settle
+  a disagreement. FeelsLike does both, on top of occupancy-aware scheduling.</dd>
+  <dt>Why RC and not CFD?</dt>
+  <dd>Control needs a model that runs much faster than real time and can be calibrated from a few measurements. CFD is far too slow for that; its
+  gaps are in our limitations list.</dd>
+  <dt>How does this attach to a real building?</dt>
+  <dd>Offices without a BMS: our nodes plus IR blasters that speak the AC remote's protocol. Offices with one: map five readings and two writes per
+  zone to BACnet or Modbus points, and run our adapter conformance test.</dd>
+  <dt>What does it cost and when does it pay back?</dt>
+  <dd>About ₹1,050 per zone and about ₹40,000 for a 20-zone floor. Assuming only a quarter of our simulated savings survive, at the verified TANGEDCO
+  tariff, payback is about 4.5 months.</dd>
+  <dt>What if a sensor drifts or dies, or the network drops?</dt>
+  <dd>Sensor health is inferred from its readings and a bad zone falls back to its schedule. If the network drops, the node's watchdog turns its
+  outputs off within 10 seconds, so the room reverts to plain behaviour — never worse than today.</dd>
+  <dt>Would you trust it on a real building?</dt>
+  <dd>Three independent safety layers — a physical switch, a firmware watchdog and a server duty cap — plus a clamped control envelope and five
+  safety modes including human approval. Two of the three layers are already tested on real hardware.</dd>
+  <dt>What did AI build, and what did you build?</dt>
+  <dd>AI assisted with code and powers the parser component, and its use is disclosed in the product. The physics model, the control law and its
+  safety envelope, the arbitration rules, the evaluation policy (the blind probe and capability gate) and the hardware design are engineering
+  decisions the team made and can defend.</dd>
+  <dt>Why is RL not your controller?</dt>
+  <dd>It saved slightly more energy but caused comfort violations. Zero violations is our thesis, so we ship the explainable controller and show RL
+  as a measured trajectory.</dd>
+</dl>
+
+<!-- ============================================================ 23 -->
+<h1><span class="num">23</span>Glossary</h1>
+<table>
+  <tr><th style="width:24%">Term</th><th>Meaning</th></tr>
+  <tr><td>A/B race</td><td>Two identical simulated buildings on identical weather, differing only in the controller.</td></tr>
+  <tr><td>Adapter seam</td><td>A fixed set of interfaces (sensor, HVAC, occupancy, weather, notifications) through which the controller touches any building — simulated, hardware, or BMS.</td></tr>
+  <tr><td>Arbitration</td><td>Combining several active complaints for one zone into a single offset.</td></tr>
+  <tr><td>ASHRAE 55 / 62.1</td><td>Standards for thermal comfort and for ventilation and indoor air quality.</td></tr>
+  <tr><td>BACnet / Modbus</td><td>Common industrial protocols used by building-management systems.</td></tr>
+  <tr><td>BMS</td><td>Building-management system: the central computer that runs a large building's HVAC.</td></tr>
+  <tr><td>Blind probe</td><td>A set of test sentences never used during development, retired ("burned") once studied.</td></tr>
+  <tr><td>Calibration</td><td>Fitting model parameters (R, C) so the model reproduces measured data.</td></tr>
+  <tr><td>Capability gate</td><td>Flags that stop any feature from being claimed in the deck or report until verified.</td></tr>
+  <tr><td>Clamp</td><td>Force a value into a range: anything below the minimum becomes the minimum, above the maximum becomes the maximum.</td></tr>
+  <tr><td>COP</td><td>Coefficient of performance: heat removed per unit of electricity. Here 3.4.</td></tr>
+  <tr><td>DHT22 / LM35 / SHT31</td><td>Low-cost temperature (and, for DHT22 and SHT31, humidity) sensors.</td></tr>
+  <tr><td>Duty cycle</td><td>The fraction of time something is on. The heater is limited to 50% of any 10-minute window.</td></tr>
+  <tr><td>ESP32</td><td>A cheap microcontroller with built-in Wi-Fi.</td></tr>
+  <tr><td>Frozen numbers</td><td>The headline results, re-checked after every change and not allowed to move silently.</td></tr>
+  <tr><td>Half-life</td><td>Time for something to fall to half its value. A complaint's half-life is 45 minutes.</td></tr>
+  <tr><td>L9110</td><td>A small motor-driver chip that lets a microcontroller switch a fan or heater from a separate power supply.</td></tr>
+  <tr><td>Pre-cool / setback</td><td>Gently cooling before people arrive / letting an empty room warm up to save energy.</td></tr>
+  <tr><td>PPO</td><td>Proximal Policy Optimisation, a standard reinforcement-learning algorithm.</td></tr>
+  <tr><td>RC model</td><td>A room modelled like a resistor (insulation) and capacitor (heat storage).</td></tr>
+  <tr><td>Seed</td><td>A number that makes "random" weather reproducible: same seed, same weather.</td></tr>
+  <tr><td>TANGEDCO LT-V</td><td>The Tamil Nadu commercial electricity tariff used in the payback maths.</td></tr>
+  <tr><td>Violation-minute</td><td>A minute in which an occupied zone is outside 23.0–26.5 °C.</td></tr>
+  <tr><td>Watchdog</td><td>A timer that forces a safe state if expected messages stop arriving.</td></tr>
+</table>
+<p class="small" style="margin-top:6mm">Sources for numbers in this document: <span class="mono">evals/results_energy.json</span>, <span class="mono">evals/results_blind.json</span>,
+<span class="mono">evals/results_blind_llm.json</span>, <span class="mono">rl/models/progress.csv</span>, <span class="mono">sim/twin.py</span>, <span class="mono">sim/controllers.py</span>,
+<span class="mono">backend/constraints.py</span>, <span class="mono">docs/FEASIBILITY.md</span>, <span class="mono">STATUS.md</span> and the verified bench session of 15 September 2026.</p>
+
+</body>
+</html>
