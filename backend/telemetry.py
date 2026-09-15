@@ -192,7 +192,7 @@ class TelemetryStore:
         dt = DT if self._last_t is None else max(0.0, min(t - self._last_t, 10 * DT))
         self._last_t = t
         t_out = float(twin.weather_fn(t)) + twin.outdoor_offset
-        rh_out = min(100.0, max(0.0, outdoor_rh(t, twin.seed) + twin.humidity_offset))
+        rh_out = twin._outdoor_rh_at(t)      # honours a seasonal rh_fn (Phase 5); same value otherwise
 
         zones = {}
         p_total = 0.0
@@ -251,6 +251,11 @@ class TelemetryStore:
             return None
         i = bisect.bisect_right(self.ts, t) - 1
         return self.rows[i] if i >= 0 else None
+
+    def rows_between(self, t_from: float | None = None, t_to: float | None = None) -> list:
+        """Raw rows with t_from <= t <= t_to, oldest first (a list copy; the row
+        dicts are shared, so callers must treat them as read-only)."""
+        return self._slice(t_from, t_to)
 
     def _slice(self, t_from: float | None, t_to: float | None) -> list:
         if not self.ts:

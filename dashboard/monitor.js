@@ -455,6 +455,11 @@
   // boot: same handshake as panels.js
   // ======================================================================
   var booted = false;
+  // Shared with dashboard/building.js so the Building tab draws with the same
+  // primitive instead of carrying a second copy. Additive; nothing here reads it.
+  window.FLChart = { lineChart: lineChart, bindHover: bindHover, tipFor: tipFor,
+                     simTicks: simTicks, simClock: simClock };
+
   function boot() {
     if (booted) return true;
     var FL = window.FL; if (!FL || typeof FL.registerPanel !== 'function') return false;
