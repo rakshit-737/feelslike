@@ -45,6 +45,18 @@ FastAPI process holds all state in memory; one static HTML file polls it.
 | `backend/constraints.py` | 120 | `Constraint`, `ConstraintStore`: decay, arbitration, explanation | — |
 | `backend/memory.py` | 84 | Comfort memory: mines recurring (zone, issue, hour) patterns, pre-applies | `backend.constraints` |
 | `backend/app.py` | 215 | `LiveSim` thread + FastAPI routes + Slack/Teams webhook + static dashboard | all of the above |
+| `backend/building.py` | **new (2026-09-15)** | Commercial building profiles (6 types), config validation, floors → zones topology, demand model, executive KPIs, zone "why" — pure projection, writes nothing | `backend.telemetry`, `sim.twin` |
+| `backend/security/*` | **new (Phase 6)** | config (modes, validation, fail-closed start), passwords (scrypt), auth (roles, permissions, users, opaque sessions), audit (redacted), ratelimit, devices (identity registry, HMAC keys, rotation, quarantine), ingest (SecureIngest in front of LatestStore), protocols (simulated MQTT broker + ACL, MQTTS config, fieldbus gateway boundary), web (POLICY table, enforce dependency, security middleware) — `docs/SECURITY.md` | stdlib only; `backend.latest` via SecureIngest |
+| `dashboard/security.js` | **new (Phase 6)** | Security tab: security metrics vs data quality, system health, protocols, device security, telemetry rejections, audit events | — |
+| `backend/scenario.py`, `backend/loads_bridge.py` | **new (Phase 5)** | Seasonal / environmental scenarios for the live twin: Phase-2 WeatherModel + override layer through the twin's weather/RH/solar hooks, envelope scale, profile internal loads, causal explanation, season comparison on clones — `docs/SEASONAL_SIMULATION.md` | `backend.dataset.weather`, `backend.dataset.loads`, `backend.comfort`, `sim.twin` |
+| `backend/simhw.py` | **new (Phase 5)** | SIMULATED hardware (not real): 20-device registry, simulated MQTT/Modbus/BACnet/HTTPS adapters, noise/bias/drift/faults, publishes via `LatestStore.ingest` — `docs/HARDWARE_SIMULATION.md` | `backend.latest` |
+| `dashboard/scenario.js` | **new (Phase 5)** | Scenario tab: environment controls, live weather, building response + causal sentence, zones, season comparison, hardware simulation panel | — |
+| `backend/latest.py`, `backend/telemetry_publish.py` | **new (Phase 4)** | Latest-value store (validate → store → freshness on read, 15-min recent buffer, sensor + system health) and its publishers (twin, comfort, hardware rig, ambient node) / readers (`ComfortReading`, `/api/latest` blocks). See §5a | `backend.comfort` |
+| `backend/comfort.py`, `backend/comfort_events.py`, `backend/comfort_whatif.py` | **new (Phase 3)** | Comfort engine (pure, reads `ComfortReading`), event/duration tracker (ticked by `LiveSim` under the lock via `_safe`), comfort-vs-energy clone runs — `docs/COMFORT.md` | `backend.telemetry`, `backend.whatif`, `sim.twin` |
+| `dashboard/comfort.js` | **new (Phase 3)** | Comfort tab (facility manager) | — |
+| `backend/dataset/*` | **new (Phase 2)** | Historical dataset pipeline: config, calendar, weather, occupancy, loads, hvac, comfort, anomalies, quality, generator (drives `sim/twin.py`), SQLite store, analysis — `docs/DATASET.md` | `sim.twin`, `sim.humidity`, `backend.building`, `backend.telemetry` |
+| `dashboard/history.js` | **new (Phase 2)** | History tab: historical charts, building/floor/zone + range filters, comparisons, anomalies, raw vs clean, export | — |
+| `dashboard/building.js` | **new (2026-09-15)** | Building tab (landing). Binds to `window.FL`; charts via `window.FLChart` from `monitor.js` | — |
 | `dashboard/index.html` | 424 | Single-file UI: floor plan SVG, energy chart, complaint console. Polls `/api/state` at 1 Hz | — |
 | `scripts/demo_day.py` | 62 | 7-day controller comparison → `evals/results_energy.json` | `sim.*` |
 | `evals/run_nlp_eval.py` | 80 | Scores the parser against `evals/benchmark.json` (dev / held-out splits) | `backend.parser` |
@@ -204,6 +216,55 @@ the right call and must not be "tidied up".
 
 ---
 
+## 5a. Latest-value telemetry (Phase 4)
+
+```
+ sim loop (60 s physics step, sim.lock held)
+   twin step ─> telemetry.record ─> _tick_latest ──ingest(source=sim/derived/predicted)──┐
+                                                                                          ▼
+ POST /api/hw/reading ─> HardwareBridge (validates) ─> publish_hardware ─ingest(hardware)─> LatestStore
+ POST /api/hw/sensor  ─> SensorNodeStore            ─> publish_ambient  ─ingest(hardware)─┘   (own lock)
+                                                                                          │
+   _tick_comfort: comfort_reading(store) ─> comfort.assess ─> ComfortTracker ─> publish_comfort (derived)
+                                                                                          │
+ GET /api/latest[/zone|/health|/sensors|/trend|/{metric}]  ◄── reads the store ──────────┘
+   ▲
+ dashboard/index.html: ONE setTimeout poll (server poll_interval_s, default 5 s; ?poll= or
+ localStorage fl.pollS) -> FL.latest + 'fl:latest' event -> Building tab "Current conditions",
+ header telemetry status. Historical endpoints (/api/history*) are untouched and not polled.
+```
+
+- **The digital twin is the telemetry source today** — every value it publishes is `sim`; this is
+  not physical building telemetry. Hardware joins through the same `ingest()`.
+- **Lock order:** `sim.lock → store lock` only. The store never calls out while locked and never
+  takes `sim.lock`; readers (`/api/latest*`) need `sim.lock` only for the clock/config snapshot.
+- **Comfort** (`/api/comfort*`, drill-down, occupant view) reads `ComfortReading`s from the store,
+  so stale or invalid inputs show up as data-quality flags and stale comfort.
+- **Reset** rebuilds the building and republishes its starting state immediately; CO₂ is
+  "No current data available" until the first telemetry row exists.
+- **Failure behaviour:** the shell marks the header OFFLINE after two failed polls and keeps the
+  last values; missing values render "Unavailable" (never 0); invalid readings are stored as
+  invalid with the rejected value; stale values stay visible as stale.
+- **Security boundary (Phase 6 does the rest):** identifiers are pattern-checked, values
+  validated, payload `source` labels ignored, no ingest endpoint accepts client-chosen sources.
+
+## 5b. Security layer (Phase 6)
+
+```
+ Browser ─(HTTPS in production / HTTP in dev)─► CORS allowlist ─► SecurityMiddleware (request id, headers,
+   HTTPS redirect, safe 500, generic POST audit) ─► route ─► enforce() [global dependency]: bearer session →
+   Principal → POLICY[(method, route)] (fail closed) → permission → rate limit ─► endpoint: field-level +
+   zone checks (require) ─► existing services ─► AuditLog
+
+ Device ─► /api/telemetry/ingest | SimulatedMqttBroker (ACL) | simulated Modbus/BACnet ─► SecureIngest
+   (registry → status → credential → HMAC → claims → timestamp → replay → metric) ─► LatestStore (trusted source)
+ Simulated hardware (Phase 5) uses the same SecureIngest via SimHardware.sink — no parallel pipeline.
+```
+
+Default `FL_SECURITY_MODE=development` keeps every earlier behaviour (explicit development principal, plain
+HTTP); `enforced` / `production` turn on authentication, device signatures and restrictive CORS, and
+production refuses to start without TLS, explicit https origins and a users file.
+
 ## 6. External interfaces
 
 | Interface | Direction | Contract | Failure behaviour |
@@ -213,6 +274,14 @@ the right call and must not be "tidied up".
 | `POST /api/complaint` | in | `{text, author}` JSON → action dict | Pydantic 422 on a missing `text` |
 | `POST /api/slack` | in | Slack form-encoded *or* Teams JSON; replies `{response_type, text}` in < 3 s | Empty text → ephemeral help message |
 | `POST /api/speed` | in | `{speed}` clamped to 1–3600 sim-s per real-s | Non-numeric → 500 (unguarded `float()`) |
+| `GET /api/building` | in | Building tab snapshot: config, operating mode, topology, zone cards, demand, KPIs (`DATA_CONTRACTS.md` §10) | — |
+| `GET/POST /api/building/profile` | in | Active profile + catalog / switch type, edit fields, operating mode (writes controller objective + safety mode) | 400 `{errors:[…]}` all-or-nothing; 422 unknown field |
+| `GET /api/building/zones/{id}` | in | Zone drill-down: trends, decision + why, constraint, alerts, events | 404 zone, 400 window |
+| `GET/POST /api/scenario`, `POST /api/scenario/reset`, `GET /api/scenario/compare` | in | Environment for the live twin (both twins), bounded; season comparison on clones (`DATA_CONTRACTS.md` §14) | 400 with every invalid field, nothing applied; 422 unknown field |
+| `GET/POST /api/simhw`, `POST /api/simhw/devices/{id}/fault`, `POST /api/simhw/devices/{id}/config` | in | SIMULATED hardware registry, enable, faults, characteristics — not real devices | 404 id not in registry, 400 bounds/mode |
+| `GET /api/latest`, `/api/latest/zone/{id}`, `/api/latest/health`, `/api/latest/sensors`, `/api/latest/trend`, `/api/latest/{metric}` | in | Current values with unit, source, quality, timestamp, age (`DATA_CONTRACTS.md` §13); polled once centrally | 400 bad zone/source/window, 404 unknown metric/zone; "No current data available" instead of zeros |
+| `GET /api/history/catalog`, `/api/history`, `/api/history/compare`, `/api/history/anomalies`, `/api/history/quality`, `/api/history/export` | in | Generated historical dataset (SQLite) — filters building/floor/zone/time/interval; ≤ 1000 points; CSV/JSON export ≤ 50 000 rows (`DATA_CONTRACTS.md` §11) | 503 when no dataset file; 400 bad filters |
+| `GET /api/building/demand` | in | Hourly actual (telemetry) vs expected (profile) | 400 bad range/zone |
 | Anthropic Messages API | out | `claude-haiku-4-5` by default, 15 s timeout, strict-JSON system prompt | Any exception → rules parser, `source: "rules"` badge |
 | OpenAI-compatible chat API | out | `LLM_BASE_URL` + `OPENAI_API_KEY`; Groq / Gemini / Ollama all work | same fallback |
 | Open-Meteo | out | `fetch_openmeteo()` — **optional, never called by the running demo** | n/a |

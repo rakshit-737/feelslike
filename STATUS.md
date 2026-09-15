@@ -123,6 +123,151 @@ Live checklist for the multi-agent upgrade. Updated at every workflow checkpoint
   fan arrives - its only immediate value is testing safety layer 0. The fuse's rating is
   unreadable, so no protection claim is made for it.
 
+**Commercial dashboard, Phase 6 (2026-09-16, verified by runs in session): security and secure connectivity.** Full detail: `docs/SECURITY.md`.
+- `backend/security/` — config (development / enforced / production; production refuses to start without https origins,
+  TLS files or upstream termination, users file), scrypt passwords (stdlib; no crypto packages installed), opaque revocable
+  bearer sessions (no cookies, so no CSRF surface), 6 roles + zone scoping, fail-closed route POLICY table (test asserts
+  every route listed), redacting audit log (memory + optional JSONL), token-bucket rate limits, device registry
+  (HMAC-SHA256 keys, rotation, revoke/expire, quarantine), SecureIngest (signature, assignment claims, source label
+  ignored, freshness, replay window, auto-quarantine) in front of the EXISTING LatestStore, SIMULATED MQTT broker +
+  adapter, MQTTS / BACnet-Modbus gateway config validators (config only), security headers + safe 500s.
+- API: `/api/security/{login,logout,whoami,status,metrics,events,devices,users}`, `POST /api/telemetry/ingest`,
+  `POST /api/control/zone/{zone_id}`, `GET /api/occupant/rooms`. Existing endpoints gained backend role/zone checks + audit.
+  The 20 simulated devices now publish through the same signed pipeline; security faults exercise it.
+- Dashboard: sign-in dialog, whoami pill, Security tab (restricted message on 403); occupant page sends its token.
+- Verified: **736 passed** (24 security tests); frozen demo_day 722.4 / 493.4 / 530.3 kWh exact. Headless-Chrome walk
+  in ENFORCED mode: 401 before login, login/logout, all tabs render, Security tab (20 devices all SIMULATED, no key material),
+  occupant 403 on control and security, operator 403 on zone_b and 200 on zone_a (audited), facility manager 403 on users,
+  unknown device 401, occupant page shows only its room and no admin info, 0 JS exceptions, 0 secrets in console.
+  Audit + server logs scanned: 0 passwords, tokens, hashes or keys. Login ~350 ms (scrypt); security GETs 5–13 ms median.
+- Fixed during validation: MQTT adapter mutated the signed envelope (now passes topic claims separately); reinstating a
+  device now clears its failure window; requests with no credentials are counted as `unauthenticated_request`,
+  not `auth_failure`.
+- **Not provided (production requirements):** TLS termination, real MQTT broker / client, BACnet/SC, shared rate-limit
+  and session store across workers, tamper-evident audit storage, SSO/MFA, HSM/KMS key storage. The local demo is plain HTTP.
+
+**Commercial dashboard, Phase 5 (2026-09-16, verified by runs in session): seasonal physical twin + SIMULATED hardware.**
+- `backend/scenario.py` + `backend/loads_bridge.py` — the Phase-2 WeatherModel (no second weather engine) drives the LIVE
+  twin through its existing weather / RH / solar hooks: season (summer / monsoon / winter / transition / auto), climate
+  (delhi / chennai), bounded override layer (cloud, rain, disturbance) over the unmodified model, existing knobs
+  (outdoor / humidity offsets, solar, occupancy, capacity), new `envelope_scale` twin hook (1.0 bit-identical), profile
+  internal loads (lighting + plugs + equipment/IT as sensible gains, HVAC sized for them). Applied to BOTH twins. Classic
+  weather stays the default and is bit-identical to the original twin (tested). Seasonal mode uses the dataset's 12 °C
+  coil ADP; classic keeps the documented RH approximation (shown in the UI). **Heating is NOT MODELLED in the live twin**
+  (controller is cooling-only) — reported everywhere, never invented. Causal explanation from telemetry deltas; season
+  comparison on clones (SIMULATED / WHAT-IF). Reset scenario restores the baseline without rebuilding or touching history.
+- `backend/simhw.py` — **SIMULATED HARDWARE, NOT REAL HARDWARE**: 20 devices (TEMP/HUM/CO2/OCC × 5 zones) mapped device →
+  zone → floor → building, simulated MQTT / Modbus / BACnet / HTTPS loopback adapters, sampling interval, noise, precision,
+  range, bias, drift, dropouts, comm delay, faults (offline / stuck / drift / invalid / delay), all through
+  `LatestStore.ingest` (source `sim`, origin `simulated_hardware`). While on, the twin stops publishing those metrics, so a
+  failed sensor really is Unavailable / stale. Controller keeps reading the twin (no sensor-failure fallback — documented).
+- Endpoints (additive): `/api/scenario` (GET/POST), `/api/scenario/reset`, `/api/scenario/compare`, `/api/simhw` (GET/POST),
+  `/api/simhw/devices/{id}/fault`, `/api/simhw/devices/{id}/config`; `/api/latest` gains `weather`, `scenario`, `causal`,
+  `telemetry_mode`, zone `internal_gain` / `hvac.heating_demand`, building `cooling_capacity_pct` / `heating_demand` /
+  `equipment_power`; readings gain `origin`. New Scenario tab (`dashboard/scenario.js`).
+- Verified: `tests/test_scenario.py` (19) + `tests/test_simhw.py` (12); full suite **712 passed**; frozen 7-day numbers exact.
+  Controlled API run, same building and clock (Mon 11:30 after 90 sim-min, office, Delhi): summer 34.6 °C out → cooling 80 %
+  of capacity, 8.5 kW, 14.4 kWh, comfort 96; monsoon 30.9 °C / 66 % RH / cloud 62 % → indoor RH 73 %, 6.4 kW; transition
+  25.3 °C → 35 %, 3.2 kW, 7.0 kWh, comfort 96; winter 16.0 °C → cooling 0, 0.87 kW (fans), indoor 21.9 °C, comfort 75,
+  heating NOT MODELLED. Summer + capacity 0.2 + 6 K at 13:30: all 5 zones AT CAPACITY, indoor 39.9 °C, comfort 38.
+  Data-centre profile loads at 03:00 with nobody in: 88.7 kW IT gain in the white space, 24 kW HVAC. Headless Chrome:
+  Scenario tab, season switches, causal chain, simulated hardware on (20 devices ONLINE, origin simulated_hardware),
+  invalid fault → "Unavailable" + DEGRADED + comfort missing input (no zeros), offline → OFFLINE, delay → DEGRADED, season
+  comparison, 4 `/api/latest` requests in 20 s, all older tabs / history / occupant page OK, no console errors beyond favicon.
+  Found and fixed in the walk-through: the environment form did not refresh when the scenario changed elsewhere.
+- Not done (Phase 6): real protocols, device identity, authentication, encryption, secure ingestion.
+
+**Commercial dashboard, Phase 4 (2026-09-15, verified by runs in session): latest-value telemetry.**
+- `backend/latest.py` — `LatestStore` (own lock; `sim.lock → store lock` only): validated `ingest()` with
+  server-side source tags (payload labels ignored, ids pattern-checked), invalid values stored as invalid with the
+  rejected value, missing as missing, freshness on read (good ≤ 60 s, aging ≤ 300 s, stale > 300 s, offline > 30 min),
+  source preference, 15-min recent buffer, counts, sensor health, `system_status()` (SIMULATION MODE / LIVE TELEMETRY /
+  DEGRADED / STALE DATA / OFFLINE from freshness only).
+- `backend/telemetry_publish.py` — the twin publishes every step through the SAME ingest (sim / derived / predicted:
+  temperature, RH, occupancy, CO₂ estimate, HVAC mode/cooling %/fan/setpoint/power, controller action, demand, energy
+  today, expected demand, outdoor); comfort is computed FROM the store (Phase-3 `ComfortReading` with sources + ages) and
+  published as derived with its oldest input's timestamp; hardware seam: `/api/hw/reading` and `/api/hw/sensor` publish
+  accepted readings as `hardware` (shown as alternatives; `FL_HW_AUTHORITATIVE=1` makes them primary).
+- Endpoints (additive): `/api/latest`, `/api/latest/zone/{id}`, `/api/latest/health`, `/api/latest/sensors`,
+  `/api/latest/trend`, `/api/latest/{metric}`; `/api/comfort/occupant` gains `updated_age_s`.
+- Dashboard: ONE central `/api/latest` poll in the shell (default 5 s, `?poll=` / `fl.pollS`), header telemetry status,
+  Building-tab "Current conditions" (building tiles, 5 zone rows with source/quality/age per value, telemetry health,
+  source summary, 15-min live trend, sensor health), occupant "updated N s ago".
+- Verified: `tests/test_latest.py` 32 tests; full suite **681 passed**; headless Chrome: values auto-refresh (sim clock
+  Mon 09:11 → 09:50 between polls), labels SIMULATED/DERIVED/PREDICTED/ESTIMATED, ages, hardware post → LIVE TELEMETRY
+  with the rig value as an alternative, invalid rig post 422, CO₂ "Unavailable" after reset, forced backend failure →
+  OFFLINE with last values kept, 4 `/api/latest` requests in 20 s (no storm), all older tabs + history charts +
+  occupant page working, no console errors beyond favicon and the intentional 422.
+- The digital twin is the telemetry source; this is **not** physical building telemetry. Not done (later phases):
+  hardware simulation / seasonal scenarios (Phase 5), security / device identity / protocols (Phase 6), push
+  transport (SSE/WebSocket), persistence of latest values across restarts.
+
+**Commercial dashboard, Phase 3 (2026-09-15, verified by runs in session): occupant comfort.**
+- `backend/comfort.py` — the one comfort engine (engineering index, not a PMV/PPD certification): thermal /
+  humidity / CO₂-ventilation-indicator sub-scores against the profile ranges, profile `comfort_weights`
+  (validated, editable), occupancy relevance (Unoccupied / Partially Occupied / Occupied), per-dimension statuses,
+  severity, root cause ranked severity-then-impact, HVAC-aware recommendation with expected effect + energy
+  consideration, data quality (missing / invalid / stale; nothing invented), `controller_preference()` interface
+  for comfort vs energy priority. Input is a `ComfortReading` — the Phase-4 latest-value seam.
+- `backend/comfort_events.py` (debounced events + resolution + per-day occupied/uncomfortable seconds),
+  `backend/comfort_whatif.py` (comfort vs energy on clones, SIMULATED / WHAT-IF, isolation verified).
+  `backend/dataset/comfort.py` now uses the engine's formulas (dataset values unchanged).
+- Endpoints (additive): `/api/comfort`, `/api/comfort/zone/{id}`, `/api/comfort/events`, `/api/comfort/history`
+  (live buffer or historical dataset; partial / "No data available"), `/api/comfort/tradeoff`,
+  `/api/comfort/occupant`; `/api/building/zones/{id}` gains `comfort`; profile POST accepts `comfort_weights`.
+- Dashboards: new Comfort tab (KPIs, heatmap → drill-down, worst zones + why, trends, events, durations,
+  trade-off); Building drill-down comfort block; occupant page "How this room feels right now" card.
+- Verified: `tests/test_comfort.py` 32 tests; full suite **649 passed**; headless-Chrome walk-through (Comfort tab
+  filters/ranges/historical, trade-off, heatmap → drill-down, six profiles change thresholds/weights, occupancy
+  relevance, events, all older tabs, occupant card with no infrastructure leak), no console errors beyond favicon.
+- Surfaced finding: in the live twin every occupied zone reads Humid/Severe because of the documented RH
+  approximation (ADP_APPROACH) — shown with a model note, not hidden or re-scored.
+
+**Commercial dashboard, Phase 2 (2026-09-15, verified by runs in session): historical dataset + History tab.**
+- `backend/dataset/` pipeline (config → calendar → seasonal weather → occupancy → loads → the EXISTING
+  `sim/twin.py` per floor under a profile BMS schedule → CO2/comfort/PMV → energy/PV/grid/demand/forecast →
+  RAW sensors → validate → CLEAN), SQLite store (stdlib), analysis, `scripts/generate_dataset.py`.
+  `sim/twin.py` gained optional hooks (RH, solar, occupancy, internal gains, per-zone capacity, heating,
+  coil ADP) — defaults bit-identical: frozen 722.4 / 493.4 / 530.3 kWh, 16 328 / 429 / 0 viol-min re-verified.
+- Default dataset generated (seed 42, 293 s): 42 days 2026-05-18 → 06-28, 5-min, 6 buildings, 35 zones,
+  12 096 timestamps, 423 360 zone rows, 72 576 building rows, 423 360 raw + 423 360 clean rows, 17 anomalies,
+  324 MB (git-ignored). Hourly correlations seen (office / mall / hospital): occupancy→CO2 0.94 / 0.95 / 0.96,
+  occupancy→energy 0.96 / 0.98 / 0.93, outdoor T→HVAC 0.85 / 0.90 / 0.95, HVAC→energy 0.98 / 0.97 / 0.98,
+  cloud→solar (10–15 h) −0.67, solar→PV 0.997. Data centre: 126 MWh with ~3 people (IT load).
+- Endpoints (additive): `/api/history/catalog`, `/api/history`, `/api/history/compare`, `/api/history/anomalies`,
+  `/api/history/quality`, `/api/history/export`. New `History` tab (`dashboard/history.js`).
+- Verified: `tests/test_dataset.py` 28 tests; headless-Chrome walk-through of History (9 charts, 1h–30d, building /
+  floor / zone, 6 comparisons, anomalies, raw vs clean, CSV export) + Phase-1 tabs, no console errors beyond favicon.
+  Docs: `docs/DATASET.md`, `DATA_CONTRACTS.md` §11, `data/README.md` §4.
+- Not done (by instruction, later phases): advanced occupant comfort (Phase 3), real-time latest-value pipeline,
+  hardware simulation/scenario UI, security.
+
+**Commercial dashboard, Phase 1 (2026-09-15, verified by runs in session): Building tab.**
+- `backend/building.py` — six commercial profiles (office, mall, hospital, hotel, college,
+  data center) as a validated `BuildingConfig`; floors → zones topology (unmodelled floors carry
+  no values); zone status flags against the PROFILE comfort/CO₂ limits; demand model (occupancy,
+  HVAC, cooling, heating = not modelled, ventilation per ASHRAE 62.1, lighting estimate, energy,
+  comfort, peak) with expected values from the profile schedule; 12 executive KPIs; factual
+  zone "why" from the controller's decision record. Pure projection: the physics, the 5 zones,
+  the parser and the A/B race are untouched. Operating modes map onto the EXISTING controller
+  levers (objective + safety mode).
+- Endpoints (additive): `GET /api/building`, `GET|POST /api/building/profile`,
+  `GET /api/building/zones/{id}`, `GET /api/building/demand`; `/api/state` gains `building`;
+  `TelemetryStore.rows_between()` (read-only) added.
+- `dashboard/building.js` — new landing tab (Overview and every other tab unchanged and
+  deep-linkable); control bar, KPI strip, building tree, demand table + interactive chart,
+  zone drill-down, validated configuration form. `monitor.js` exports its chart primitive as
+  `window.FLChart` (additive).
+- Verified: `tests/test_building.py` (55 tests) + full suite **589 passed**; frozen numbers
+  exact (722.4 / 493.4 / 530.3 kWh; 16 328 / 429 / 0 viol-min); headless-Chrome walk-through
+  (landing, 12 KPIs, type switch to hospital, floor filter, zone drill-down with 6 trend charts,
+  mode change moved the controller objective, invalid form rejected with nothing applied, valid
+  form saved, all 12 existing tabs still render) with no console errors beyond the missing
+  favicon and the intentional 400. Docs: `docs/BUILDING_PROFILES.md`, `DATA_CONTRACTS.md` §10.
+- Not done (later phases, by instruction): dataset expansion, real-time telemetry architecture,
+  seasonal weather, hardware simulation, security architecture; scaling the 5 modelled zones
+  to the configured building; a dedicated peak-shaving control law; heating.
+
 **Workflow 1 outcome (verified 2026-08-17):** 10 agents, 0 errors. Every Phase A+B `[~]` above is now `[x]`:
 
 ```
