@@ -1,0 +1,44 @@
+FeelsLike — Buildings That Listen
+Copyright 2026 Team Goldilocks
+
+This product is dual-licensed: the source code may be used under either the
+Apache License, Version 2.0 (LICENSE-APACHE) or the MIT License (LICENSE-MIT),
+at your option. SPDX-License-Identifier: Apache-2.0 OR MIT
+
+Documentation, the presentation deck, reports and figures are licensed under
+Creative Commons Attribution 4.0 International (LICENSE-DOCS).
+
+--------------------------------------------------------------------------------
+Third-party data (NOT covered by the licences above — each keeps its own terms)
+--------------------------------------------------------------------------------
+
+data/uci_occupancy.csv
+  UCI Occupancy Detection dataset, UCI Machine Learning Repository, dataset 357.
+  https://archive.ics.uci.edu/dataset/357/occupancy+detection
+  Candanedo, L. M., & Feldheim, V. (2016). Accurate occupancy detection of an
+  office room from light, temperature, humidity and CO2 measurements using
+  statistical learning models. Energy and Buildings, 112, 28-39.
+  Licence: CC BY 4.0. Redistributed here merged from the three original files
+  and sorted by timestamp (scripts/fetch_datasets.py reproduces it).
+
+Open-Meteo (live feed, not bundled)
+  Weather and air-quality data by Open-Meteo.com.
+  https://open-meteo.com  —  Licence: CC BY 4.0.
+  Air-quality values derive from the Copernicus Atmosphere Monitoring Service
+  (CAMS) global model via Open-Meteo.
+
+--------------------------------------------------------------------------------
+Third-party software
+--------------------------------------------------------------------------------
+
+Dependencies are installed from their upstream distributions and are not
+redistributed in this repository; each is governed by its own licence.
+  Core runtime (requirements.txt): FastAPI, Uvicorn, Pydantic, httpx,
+    python-dotenv, python-multipart, Gymnasium.
+  Imported directly but installed separately: NumPy (simulation, RL environment,
+    calibration fit); Stable-Baselines3 with its PyTorch dependency (optional RL
+    track, rl/ and the RLPolicy controller).
+  Document tooling (scripts/update_docs.py, scripts/update_technical_report.py):
+    python-pptx, python-docx.
+  Firmware (hardware/firmware): the ESP32 Arduino core (Espressif), Adafruit DHT
+    sensor library and Adafruit Unified Sensor, ArduinoJson.

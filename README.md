@@ -115,3 +115,18 @@ simulator + api + hardware + calibration + tariff). Frozen headline numbers exac
    ≥2 days get a gentle constraint pre-applied 30 min early, announced in the feed.
 6. **Remaining — pitch:** follow the 3-minute demo script in `IMPLEMENTATION.md`
    §9; record the backup video (M5); rehearse Q&A drill (§8).
+
+## License
+
+Source code is dual-licensed under **Apache-2.0 OR MIT**, at your option
+([LICENSE-APACHE](LICENSE-APACHE), [LICENSE-MIT](LICENSE-MIT)). Apache-2.0 includes an
+explicit patent grant; MIT is the simplest permissive option.
+
+Documentation, the presentation deck, reports and figures are licensed under
+**CC BY 4.0** ([LICENSE-DOCS](LICENSE-DOCS)).
+
+Bundled third-party data keeps its own licence and attribution — the UCI Occupancy
+Detection dataset and the Open-Meteo feed are both CC BY 4.0. See [NOTICE](NOTICE).
+
+**Hackathon note:** if the event's rules require assigning IP or using a specific
+licence, those rules take precedence over this section.
