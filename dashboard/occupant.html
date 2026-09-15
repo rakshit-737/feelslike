@@ -41,6 +41,17 @@
     --tap:48px;                       /* every interactive row clears 44px */
   }
   * { box-sizing:border-box; margin:0; }
+  /* comfort card (Phase 3) */
+  .comfortcard .cm-head { display:flex; align-items:center; gap:7px; font-size:16px; margin:4px 0 8px; }
+  .cm-dot { width:10px; height:10px; border-radius:99px; background:var(--good); flex:none; }
+  .cm-dot.bad { background:var(--warn); }
+  .cm-issue { color:#8a5a00; font-weight:600; }
+  .cm-row { display:grid; grid-template-columns:1fr auto auto; gap:2px 10px; align-items:baseline;
+            padding:6px 0; border-top:1px solid var(--grid); font-variant-numeric:tabular-nums; }
+  .cm-row small { grid-column:1 / -1; color:var(--muted); font-size:12px; }
+  .cm-st { font-size:12px; font-weight:600; }
+  .cm-st.ok { color:var(--good); } .cm-st.bad { color:#8a5a00; }
+  .cm-why { margin:8px 0 6px; font-size:14px; color:var(--ink2); }
   html, body { overflow-x:hidden; }   /* nothing may scroll sideways at 320px */
   body { background:var(--page); color:var(--ink);
          font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -225,6 +236,11 @@
       <p class="roomnow" id="roomnow">Reading the building…</p>
     </div>
 
+    <section class="card comfortcard" id="comfortcard" aria-labelledby="comforthead" aria-live="polite">
+      <h2 id="comforthead">How this room feels right now</h2>
+      <div id="comfortbody"><p class="hint">Reading comfort…</p></div>
+    </section>
+
     <fieldset class="card">
       <legend>How bad is it?</legend>
       <div class="seg" id="sev">
@@ -369,6 +385,48 @@ function drawRoomNow(state) {
     ` · <b>${n}</b> active request${n === 1 ? '' : 's'} here` +
     ` · ${esc(state.sim.clock)}`;
 }
+/* Comfort for the chosen room, from /api/comfort/occupant (backend/comfort.py).
+   Plain words only; no controller, hardware or network detail reaches this page. */
+async function pollComfort() {
+  const room = $('room').value;
+  if (!room) return;
+  try {
+    const r = await fetch('/api/comfort/occupant?zone=' + encodeURIComponent(room), {cache:'no-store', headers: occHeaders()});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    drawComfort(await r.json());
+  } catch (e) {
+    $('comfortbody').innerHTML = '<p class="hint">Comfort information unavailable right now.</p>';
+  }
+}
+function drawComfort(c) {
+  const v = (x, d, u) => (typeof x === 'number' && isFinite(x)) ? `${x.toFixed(d)} ${u}` : 'Unavailable';
+  const good = s => ['Comfortable', 'Good', 'Moderate', 'Excellent', 'Acceptable'].includes(s);
+  const row = (label, value, status, range) =>
+    `<div class="cm-row"><span>${esc(label)}</span><b>${esc(value)}</b>` +
+    `<span class="cm-st ${good(status) ? 'ok' : 'bad'}">${esc(status)}</span>` +
+    `<small>${esc(range)}</small></div>`;
+  const pts = (c.trend || []).filter(p => typeof p.score === 'number');
+  let spark = '<p class="hint">No recent trend yet.</p>';
+  if (pts.length > 1) {
+    const W = 280, H = 44, x0 = pts[0].t, x1 = pts[pts.length - 1].t || x0 + 1;
+    const d = pts.map((p, i) => (i ? 'L' : 'M') + (W * (p.t - x0) / Math.max(1, x1 - x0)).toFixed(1) + ' ' +
+                               (H - 2 - (H - 4) * p.score / 100).toFixed(1)).join(' ');
+    spark = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img" aria-label="Comfort score over the last hours">` +
+            `<path d="${d}" fill="none" stroke="var(--us)" stroke-width="2"/></svg>` +
+            `<p class="hint">Comfort score, recent hours (0–100)</p>`;
+  }
+  const t = c.temperature, h = c.humidity, a = c.air_quality;
+  $('comfortbody').innerHTML =
+    `<p class="cm-head"><span class="cm-dot ${c.issue ? 'bad' : 'ok'}" aria-hidden="true"></span>` +
+    `<b>${esc(c.status)}</b>${typeof c.score === 'number' ? ` · ${Math.round(c.score)}/100` : ''}` +
+    `${c.issue ? ' · <span class="cm-issue">issue</span>' : ''}</p>` +
+    row('Temperature', v(t.value, 1, '°C'), t.status, `comfortable ${t.range[0]}–${t.range[1]} °C`) +
+    row('Humidity', v(h.value, 0, '%'), h.status, `comfortable ${h.range[0]}–${h.range[1]} %`) +
+    row(a.label, v(a.co2_ppm, 0, 'ppm'), a.status, `limit ${a.limit} ppm`) +
+    `<p class="cm-why">${esc(c.explanation)}</p>${spark}` +
+    `<p class="hint">${esc(c.data_note)} · ${esc(c.sim_clock)}` +
+    `${typeof c.updated_age_s === 'number' ? ` · updated ${Math.round(c.updated_age_s)} s ago` : ' · no current reading'}</p>`;
+}
 function setNet(up, why) {
   online = up;
   $('netbadge').hidden = up;
@@ -376,10 +434,23 @@ function setNet(up, why) {
   $('netbadge').classList.toggle('netbadge', !up);
 }
 
+/* Phase 6: the occupant page uses the minimal /api/occupant/rooms view (no controller, device or
+   security internals) and, when the building enforces sign-in, a bearer token kept in this tab only. */
+function occToken() { try { return sessionStorage.getItem('fl.token'); } catch (e) { return null; } }
+function occHeaders(extra) {
+  const h = Object.assign({}, extra || {});
+  const t = occToken(); if (t) h['Authorization'] = 'Bearer ' + t;
+  return h;
+}
+function showSignIn() {
+  const el = $('occsignin');
+  if (el) el.hidden = false;
+}
 let latestState = null;
 async function pollState() {
   try {
-    const r = await fetch('/api/state', {cache:'no-store'});
+    const r = await fetch('/api/occupant/rooms', {cache:'no-store', headers: occHeaders()});
+    if (r.status === 401 || r.status === 403) { showSignIn(); throw new Error('HTTP ' + r.status); }
     if (!r.ok) throw new Error('HTTP ' + r.status);
     latestState = await r.json();
     if (Array.isArray(latestState.zones) && latestState.zones.length) {
@@ -390,6 +461,7 @@ async function pollState() {
     }
     setNet(true);
     drawRoomNow(latestState);
+    pollComfort();
   } catch (e) {
     setNet(false, 'no connection to the building');
     drawRoomNow(null);
@@ -542,7 +614,7 @@ function holdQueue(payload, why) {
 }
 async function post(payload) {
   const r = await fetch('/api/complaint', {
-    method:'POST', headers:{'Content-Type':'application/json'},
+    method:'POST', headers: occHeaders({'Content-Type': 'application/json'}),
     body: JSON.stringify(payload)
   });
   if (!r.ok) {

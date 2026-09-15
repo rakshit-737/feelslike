@@ -68,6 +68,18 @@
           padding:3px 12px; font-size:12.5px; color:var(--ink2); }
   .pill b { color:var(--ink); font-variant-numeric:tabular-nums; }
   .pill-stale { color:var(--crit); border-color:var(--crit); font-weight:600; }
+  .livestat b { font-weight:600; }
+  .whoami b { font-weight:600; } .whoami.dev b { color:#8a5a00; }
+  .authbtn { font:inherit; font-size:11.5px; margin-left:6px; border:1px solid var(--border); background:var(--page);
+             border-radius:6px; padding:1px 8px; cursor:pointer; }
+  dialog#login { border:1px solid var(--border); border-radius:10px; padding:16px 18px; min-width:300px; }
+  dialog#login::backdrop { background:rgba(0,0,0,.25); }
+  #login label { display:flex; flex-direction:column; gap:3px; font-size:12.5px; margin-bottom:8px; }
+  #login input { font:inherit; border:1px solid var(--border); border-radius:6px; padding:6px 8px; }
+  #login .row { display:flex; gap:8px; justify-content:flex-end; margin-top:8px; }
+  #login .err { color:var(--crit); font-size:12.5px; min-height:1.2em; }
+  .livestat.ls-sim b { color:#8a5a00; } .livestat.ls-live b { color:var(--good); }
+  .livestat.ls-degraded b, .livestat.ls-stale b { color:#b0381f; } .livestat.ls-offline b { color:var(--crit); }
   .speed { margin-left:auto; display:flex; gap:6px; }
   .speed button { border:1px solid var(--border); background:var(--surface); color:var(--ink2);
                   border-radius:8px; padding:3px 10px; cursor:pointer; font-size:12px; }
@@ -192,6 +204,10 @@
     <span class="dot"></span><b>SIMULATION MODE</b><span>— no real HVAC equipment connected</span></span>
   <span class="pill">Sim clock <b id="clock">—</b></span>
   <span class="pill">Outdoor <b id="tout">—</b></span>
+  <span class="pill">Building <b id="bldg">—</b></span>
+  <span class="pill livestat" id="livestat" title="Derived from the freshness and source of /api/latest">Telemetry <b>—</b></span>
+  <span class="pill whoami" id="whoami" title="Security mode and signed-in user">Security <b>—</b>
+    <button type="button" id="authbtn" class="authbtn">Sign in</button></span>
   <span class="pill pill-stale" id="stale" hidden>reconnecting…</span>
   <div class="speed" id="speed">
     <button data-s="60">60×</button><button data-s="240" class="on">240×</button>
@@ -200,6 +216,10 @@
 </header>
 <nav id="tabs" role="tablist" aria-label="Dashboard sections">
   <div class="tabrow tabrow-primary" role="presentation">
+    <button role="tab" id="tab-building" data-tab="building" aria-controls="panel-building" aria-selected="false" tabindex="-1">Building</button>
+    <button role="tab" id="tab-scenario" data-tab="scenario" aria-controls="panel-scenario" aria-selected="false" tabindex="-1">Scenario</button>
+    <button role="tab" id="tab-comfort" data-tab="comfort" aria-controls="panel-comfort" aria-selected="false" tabindex="-1">Comfort</button>
+    <button role="tab" id="tab-history" data-tab="history" aria-controls="panel-history" aria-selected="false" tabindex="-1">History</button>
     <button role="tab" id="tab-overview" data-tab="overview" aria-controls="panel-overview" aria-selected="true" tabindex="0">Overview</button>
     <button role="tab" id="tab-monitor" data-tab="monitor" aria-controls="panel-monitor" aria-selected="false" tabindex="-1">Monitor</button>
     <button role="tab" id="tab-twin" data-tab="twin" aria-controls="panel-twin" aria-selected="false" tabindex="-1">Live twin</button>
@@ -214,6 +234,7 @@
     <button role="tab" id="tab-analytics" data-tab="analytics" aria-controls="panel-analytics" aria-selected="false" tabindex="-1">Analytics</button>
     <button role="tab" id="tab-maintenance" data-tab="maintenance" aria-controls="panel-maintenance" aria-selected="false" tabindex="-1">Maintenance</button>
     <button role="tab" id="tab-experiments" data-tab="experiments" aria-controls="panel-experiments" aria-selected="false" tabindex="-1">Experiments</button>
+    <button role="tab" id="tab-security" data-tab="security" aria-controls="panel-security" aria-selected="false" tabindex="-1">Security</button>
     <button role="tab" id="tab-settings" data-tab="settings" aria-controls="panel-settings" aria-selected="false" tabindex="-1">Settings</button>
   </div>
 </nav>
@@ -297,6 +318,30 @@
 <!-- The other ten panels are mounted by /static/panels.js (agent D2). Each ships a
      one-line honest placeholder so an unmounted tab reads as "loading", never as
      broken; if panels.js never registers, the line says so after 4 s. -->
+<!-- The Building tab (commercial building console) is mounted by /static/building.js. -->
+<section class="panel" id="panel-building" role="tabpanel" aria-labelledby="tab-building">
+  <p class="panel-wait">Building · loading…</p></section>
+<!-- The Security tab (Phase 6) is mounted by /static/security.js; its data is role-restricted server-side. -->
+<section class="panel" id="panel-security" role="tabpanel" aria-labelledby="tab-security">
+  <p class="panel-wait">Security · loading…</p></section>
+<dialog id="login" aria-labelledby="loginhead">
+  <form method="dialog" id="loginform">
+    <h2 id="loginhead" style="font-size:15px;margin-bottom:10px">Sign in to FeelsLike</h2>
+    <label>Username <input name="username" autocomplete="username" required maxlength="32"></label>
+    <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+    <p class="err" id="loginerr" role="alert"></p>
+    <div class="row"><button type="button" id="logincancel">Cancel</button><button type="submit">Sign in</button></div>
+  </form>
+</dialog>
+<!-- The Scenario tab (seasonal simulation + simulated hardware) is mounted by /static/scenario.js. -->
+<section class="panel" id="panel-scenario" role="tabpanel" aria-labelledby="tab-scenario">
+  <p class="panel-wait">Scenario · loading…</p></section>
+<!-- The Comfort tab (occupant comfort console) is mounted by /static/comfort.js. -->
+<section class="panel" id="panel-comfort" role="tabpanel" aria-labelledby="tab-comfort">
+  <p class="panel-wait">Comfort · loading…</p></section>
+<!-- The History tab (generated historical dataset) is mounted by /static/history.js. -->
+<section class="panel" id="panel-history" role="tabpanel" aria-labelledby="tab-history">
+  <p class="panel-wait">History · loading…</p></section>
 <section class="panel" id="panel-monitor" role="tabpanel" aria-labelledby="tab-monitor">
   <p class="panel-wait">Monitor · loading…</p></section>
 <section class="panel" id="panel-twin" role="tabpanel" aria-labelledby="tab-twin">
@@ -447,7 +492,7 @@ async function send(text){
   if(sending) return;
   sending=true; $('send').disabled=true; $('senderr').hidden=true;
   try{
-    const r=await fetch('/api/complaint',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await guardedFetch('/api/complaint',{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),
       body:JSON.stringify({text, author:'you'})});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const j=await r.json();
@@ -471,7 +516,7 @@ $('viewToggle').onclick=()=>{tableMode=!tableMode;
 $('speed').addEventListener('click',async e=>{
   if(e.target.tagName!=='BUTTON')return;
   try{
-    const r=await fetch('/api/speed',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await guardedFetch('/api/speed',{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),
       body:JSON.stringify({speed:+e.target.dataset.s})});
     if(!r.ok) throw new Error('HTTP '+r.status);
     setSpeedButtons((await r.json()).speed);   /* reflect the speed the sim confirmed */
@@ -522,7 +567,7 @@ function renderOverview(s){
    to; nothing here knows what any panel contains. Overview is native
    (rendered above) so a missing panels.js costs the pitch nothing.
    ================================================================== */
-const PANELS = ['overview','monitor','twin','complaints','control','explain','whatif',
+const PANELS = ['overview','building','security','scenario','comfort','history','monitor','twin','complaints','control','explain','whatif',
                 'analytics','maintenance','experiments','settings','demo'];
 const reg = new Map();          /* key -> {mount, update, mounted, broken} */
 let activeTab = 'overview';
@@ -554,12 +599,25 @@ async function readJson(r, path){
   }
   return j;
 }
+/* Phase 6: bearer token (sessionStorage, this tab only; never logged, never put in URLs). A 401 opens
+   the sign-in dialog. Authorization is enforced by the backend; the UI only reflects it. */
+function authToken(){ try{ return sessionStorage.getItem('fl.token'); }catch(e){ return null; } }
+function authHeaders(extra){
+  const h=Object.assign({'Accept':'application/json'}, extra||{});
+  const t=authToken(); if(t) h['Authorization']='Bearer '+t;
+  return h;
+}
+async function guardedFetch(path, opts){
+  const r=await fetch(path, opts);
+  if(r.status===401) document.dispatchEvent(new CustomEvent('fl:auth-required'));
+  return r;
+}
 async function apiGet(path){
-  return readJson(await fetch(path,{headers:{'Accept':'application/json'}}), path);
+  return readJson(await guardedFetch(path,{headers:authHeaders()}), path);
 }
 async function apiPost(path, body){
-  return readJson(await fetch(path,{method:'POST',
-    headers:{'Content-Type':'application/json'},
+  return readJson(await guardedFetch(path,{method:'POST',
+    headers:authHeaders({'Content-Type':'application/json'}),
     body:JSON.stringify(body ?? {})}), path);
 }
 
@@ -668,11 +726,14 @@ window.FL = {
 let failedTicks=0;
 async function tick(){
   try{
-    const s=await (await fetch('/api/state')).json(); state=s; FL.state=s;
+    const resp=await guardedFetch('/api/state',{headers:authHeaders()});
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const s=await resp.json(); state=s; FL.state=s;
     failedTicks=0; $('stale').hidden=true; document.body.classList.remove('stale');
     /* header chrome is outside every panel, so it always updates */
     $('clock').textContent=s.sim.clock;
     $('tout').textContent=s.sim.t_out.toFixed(1)+' °C';
+    if(s.building) $('bldg').textContent=s.building.name+' · '+s.building.type_label;
     setSpeedButtons(s.sim.speed);
     if(activeTab==='overview') renderOverview(s);
     document.dispatchEvent(new CustomEvent('fl:state',{detail:s}));
@@ -689,12 +750,102 @@ setTimeout(()=>{
     if(k==='overview' || reg.has(k)) continue;
     const w=panelEl(k).querySelector('.panel-wait');
     if(w) w.textContent=tabEl(k).textContent+' · panel module not loaded '
-      +'(/static/'+(k==='monitor'?'monitor':'panels')+'.js). Everything the demo needs is on Overview.';
+      +'(/static/'+(['monitor','building','history','comfort','scenario','security'].includes(k)?k:'panels')+'.js). Everything the demo needs is on Overview.';
   }
+  /* The Building tab is the landing page; if its module never arrived, fall back
+     to the natively rendered Overview rather than parking the user on an error. */
+  if(activeTab==='building' && !reg.has('building') && !location.hash.slice(1)) activate('overview', false);
 }, 4000);
 
-activate(location.hash.slice(1), false);
+/* No hash = land on the Building console; #overview etc. still deep-link. */
+activate(location.hash.slice(1) || 'building', false);
 tick(); setInterval(tick, 1000);
+
+/* ==================================================================
+   LATEST VALUES (Phase 4): ONE central /api/latest poll for the whole page.
+   Panels subscribe with FL.on('latest', fn) and read FL.latest — no panel
+   polls /api/latest itself. Interval: server poll_interval_s (default 5 s),
+   overridable with ?poll=<seconds> or localStorage 'fl.pollS' (min 1 s).
+   The header status comes from data freshness, never from a timer.
+   ================================================================== */
+const LATEST_STATUS_CLASS = {'LIVE TELEMETRY':'ls-live','SIMULATION MODE':'ls-sim','DEGRADED':'ls-degraded',
+                             'STALE DATA':'ls-stale','OFFLINE':'ls-offline'};
+let latestFails = 0, latestTimer = null;
+function latestIntervalMs(serverS){
+  let s = Number(new URLSearchParams(location.search).get('poll'));
+  if(!(s>0)){ try{ s = Number(localStorage.getItem('fl.pollS')); }catch(e){} }
+  if(!(s>0)) s = Number(serverS) || 5;
+  return Math.max(1000, s*1000);
+}
+function drawLiveStatus(label, cls, title){
+  const el=$('livestat'); if(!el) return;
+  el.className='pill livestat '+(cls||'');
+  el.innerHTML='Telemetry <b>'+esc(label)+'</b>';
+  el.title=title||'';
+}
+async function latestTick(){
+  let next = latestIntervalMs(FL.latest && FL.latest.poll_interval_s);
+  try{
+    const j = await apiGet('/api/latest');
+    latestFails = 0; FL.latest = j; FL.latestError = null;
+    const h = j.system_health || {};
+    drawLiveStatus(h.label || h.status || '—', LATEST_STATUS_CLASS[h.status],
+                   (h.reasons||[]).join('; ') + ' · last update ' + (j.data_quality && j.data_quality.last_update_age_s!=null ? j.data_quality.last_update_age_s+' s ago' : '—'));
+    next = latestIntervalMs(j.poll_interval_s);
+    document.dispatchEvent(new CustomEvent('fl:latest',{detail:j}));
+  }catch(e){
+    latestFails++;
+    FL.latestError = 'backend unreachable';
+    if(latestFails>=2){
+      drawLiveStatus('● OFFLINE', 'ls-offline', 'The backend did not answer /api/latest; last values are kept but marked offline.');
+      document.dispatchEvent(new CustomEvent('fl:latest',{detail:null}));
+    }
+  }
+  latestTimer = setTimeout(latestTick, next);
+}
+FL.latest = null;
+latestTick();
+
+/* ---------------------------------------------------------------- Phase 6: sign-in / whoami */
+FL.auth = { token: authToken, whoami: null };
+async function refreshWhoami(){
+  try{
+    const w = await apiGet('/api/security/whoami');
+    FL.auth.whoami = w;
+    const p = w.principal, el=$('whoami');
+    el.classList.toggle('dev', w.mode==='development');
+    el.firstChild.nodeValue = 'Security ';
+    el.querySelector('b') ? el.querySelector('b').textContent =
+      (p.authenticated ? p.username+' · '+p.role : (w.mode==='development' ? 'DEVELOPMENT (no auth)' : 'signed out')) : 0;
+    el.title = w.label;
+    $('authbtn').textContent = p.authenticated ? 'Sign out' : 'Sign in';
+    document.dispatchEvent(new CustomEvent('fl:auth',{detail:w}));
+  }catch(e){ /* whoami is public; a failure means the backend is down — telemetry pill shows that */ }
+}
+function openLogin(){ const d=$('login'); if(d && !d.open){ $('loginerr').textContent=''; d.showModal(); } }
+document.addEventListener('fl:auth-required', ()=>{ if(!FL.auth.whoami || FL.auth.whoami.auth_enabled) openLogin(); });
+$('logincancel').onclick=()=>$('login').close();
+$('loginform').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const f=e.target;
+  try{
+    const r=await fetch('/api/security/login',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username:f.username.value, password:f.password.value})});
+    const j=await r.json().catch(()=>({}));
+    f.password.value='';                                    /* never keep the password in the DOM */
+    if(!r.ok){ $('loginerr').textContent = r.status===429 ? 'Too many attempts. Wait and try again.' : 'Authentication failed.'; return; }
+    try{ sessionStorage.setItem('fl.token', j.token); }catch(err){}
+    $('login').close(); await refreshWhoami(); tick(); latestTick();
+  }catch(err){ $('loginerr').textContent='Could not reach the building.'; }
+});
+$('authbtn').onclick=async ()=>{
+  if(FL.auth.whoami && FL.auth.whoami.principal.authenticated){
+    try{ await apiPost('/api/security/logout',{}); }catch(e){}
+    try{ sessionStorage.removeItem('fl.token'); }catch(e){}
+    await refreshWhoami();
+  } else openLogin();
+};
+refreshWhoami();
 </script>
 <!-- After the inline script on purpose: window.FL must exist before any panel
      registers, and a failed load here leaves the Overview console untouched. -->
@@ -702,5 +853,16 @@ tick(); setInterval(tick, 1000);
 <!-- The Monitor tab lives in its own module so panels.js (single-owner, pinned)
      stays untouched; it binds to the same FL contract. -->
 <script src="/static/monitor.js" defer></script>
+<!-- The Building tab (commercial profiles, demand, KPIs, zone drill-down). After
+     monitor.js because it draws with the chart primitive monitor.js exports. -->
+<script src="/static/building.js" defer></script>
+<!-- The History tab (Phase 2 generated dataset); same chart dependency on monitor.js. -->
+<script src="/static/history.js" defer></script>
+<!-- The Comfort tab (Phase 3 occupant comfort); same chart dependency on monitor.js. -->
+<script src="/static/comfort.js" defer></script>
+<!-- The Scenario tab (Phase 5: seasons, physics knobs, simulated hardware). -->
+<script src="/static/scenario.js" defer></script>
+<!-- The Security tab (Phase 6: device security, telemetry security, audit events, system health). -->
+<script src="/static/security.js" defer></script>
 </body>
 </html>
