@@ -56,8 +56,9 @@ from backend.constraints import ConstraintStore
 from backend.contracts import OBJECTIVES, SAFETY_MODES, to_dict
 from backend.decisions import DecisionLog
 from backend.demo import DemoRunner
-from backend.hardware import (HW_ZONE, READING_LOG_MAX, HardwareBridge,
-                              HttpHVACAdapter, HttpSensorAdapter)
+from backend.hardware import (HW_ZONE, READING_LOG_MAX, SENSOR_NODE_LOG_MAX,
+                              HardwareBridge, HttpHVACAdapter, HttpSensorAdapter,
+                              SensorNodeStore)
 from backend.maintenance import MaintenanceMonitor
 from backend.memory import ComfortMemory
 from backend.privacy import AIDisclosure
@@ -120,6 +121,10 @@ class LiveSim:
         self.hw_bridge = HardwareBridge()
         self.hw_sensor = HttpSensorAdapter(self.hw_bridge)
         self.hw_hvac = HttpHVACAdapter(self.hw_bridge)
+        # Sensor-only nodes (the Uno ambient reference over USB serial). Kept
+        # apart from the actuator bridge so a sensor can never be handed a
+        # command or overwrite the rig's reading; survives a reset like the rig.
+        self.hw_sensors = SensorNodeStore()
         # External REAL feed (Open-Meteo) + HISTORICAL dataset (backend.external).
         # Wall-clock, read-only, never fed to the physics; survive a reset like
         # the rig does. FL_EXTERNAL=0 disables the network thread entirely.
@@ -672,7 +677,8 @@ class LiveSim:
                 "decisions": self.decisions.recent(DECISIONS_IN_STATE),
                 "analytics": {"summary": self.analytics.summary(feed, alerts)},
                 "privacy": self.privacy_state(),
-                "hardware": self.hw_bridge.status(),
+                "hardware": {**self.hw_bridge.status(),
+                             "ambient": self.hw_sensors.status()["ambient"]},
                 # additive: Monitor-tab summary (full data at /api/monitor,
                 # /api/telemetry, /api/external, /api/dataset, /api/forecast)
                 "monitor": {"rows": len(self.telemetry),
@@ -762,6 +768,21 @@ class HwReadingIn(BaseModel):
 class HwHeaterIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     on: bool
+
+
+class HwSensorIn(BaseModel):
+    # Sensor-only node body. extra="allow" for the same reason as HwReadingIn:
+    # firmware may grow fields without a lockstep server deploy.
+    model_config = ConfigDict(extra="allow")
+    node_id: str
+    temp_c: float | None = None
+    fault: str | None = None
+    counts: float | None = None
+    seq: int = 0
+    uptime_s: float = 0.0
+    role: str = "ambient"
+    transport: str = "unknown"
+    calibrated: bool = False
 
 
 # ==========================================================================
@@ -1247,6 +1268,7 @@ def hw_status():
     st["sensor_health"] = sim.hw_sensor.health(HW_ZONE)
     st["hvac_capabilities"] = sim.hw_hvac.capabilities()
     st["recent_writes"] = list(sim.hw_bridge.writes[-20:])
+    st["ambient"] = sim.hw_sensors.status()["ambient"]
     return st
 
 
@@ -1278,6 +1300,58 @@ def hw_log(limit: int = 4096):
         raise HTTPException(400, f"limit must be between 1 and {READING_LOG_MAX}")
     rows = sim.hw_bridge.log_rows(limit)
     return {"zone": HW_ZONE, "rows": rows, "count": len(rows)}
+
+
+@app.post("/api/hw/sensor")
+def hw_sensor(body: HwSensorIn):
+    """A sensor-only node's reading (the Uno ambient reference, via
+    scripts/serial_bridge.py). Separate from /api/hw/reading on purpose: the
+    reply is an acknowledgement, never an actuator command, and it cannot
+    overwrite the shoebox rig's reading.
+
+    INPUT: {"node_id": str, "temp_c": float | null, "fault": str | null,
+      "counts": float | null, "seq": int, "uptime_s": float, "role": str,
+      "transport": str, "calibrated": bool}. temp_c OR fault; extra fields are
+      ignored. calibrated is the node's own claim that it was cross-calibrated;
+      the dashboard labels every other reading uncalibrated.
+    OUTPUT: {"ok": true, "node_id", "accepted"}. accepted=false for a fault.
+    SIDE EFFECTS: stores the reading in that node's bounded log.
+    ERROR STATES: 422 naming the field for a missing or implausible value.
+    """
+    try:
+        return sim.hw_sensors.post(body.model_dump())
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from e
+
+
+@app.get("/api/hw/sensors")
+def hw_sensors():
+    """Every sensor-only node: latest reading, staleness, inferred health, and
+    the current ambient reference (null unless a connected ambient node's
+    latest reading is a real temperature).
+
+    INPUT: none. OUTPUT: {"nodes": [...], "ambient": {...} | null, "stale_after_s"}.
+    SIDE EFFECTS: none. ERROR STATES: none.
+    """
+    return sim.hw_sensors.status()
+
+
+@app.get("/api/hw/sensors/{node_id}/log")
+def hw_sensor_log(node_id: str, limit: int = 4096):
+    """One sensor-only node's reading log, oldest first (cross-calibration input).
+
+    INPUT: node_id (path segment), ?limit=1..8192 (default 4096).
+    OUTPUT: {"node_id", "rows", "count"}.
+    SIDE EFFECTS: none. ERROR STATES: 400 for a bad limit; 404 for a node that
+      has never posted.
+    """
+    if not 1 <= limit <= SENSOR_NODE_LOG_MAX:
+        raise HTTPException(400, f"limit must be between 1 and {SENSOR_NODE_LOG_MAX}")
+    try:
+        rows = sim.hw_sensors.log_rows(node_id, limit)
+    except KeyError:
+        raise HTTPException(404, f"no sensor node {node_id!r} has posted") from None
+    return {"node_id": node_id, "rows": rows, "count": len(rows)}
 
 
 # ==========================================================================
@@ -1343,6 +1417,7 @@ def get_monitor(zone: str = "all"):
         clock, t = sim.clock(), sim.us.t
         hw = sim.hw_bridge.status()
     hw["sensor_health"] = sim.hw_sensor.health(HW_ZONE)
+    hw["ambient"] = sim.hw_sensors.status()["ambient"]
     ext = sim.external.snapshot(0, 0)
     return {
         "zone": zone, "sim_clock": clock, "sim_t": t,

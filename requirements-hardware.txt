@@ -1,0 +1,2 @@
+# Hardware tooling only - never imported by backend/ (the gateway needs only requirements.txt).
+pyserial>=3.5   # scripts/serial_bridge.py: the Uno ambient node over USB serial

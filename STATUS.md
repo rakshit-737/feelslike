@@ -99,6 +99,30 @@ Live checklist for the multi-agent upgrade. Updated at every workflow checkpoint
   numbers exact, 13 KPI cards (11 server + light/noise client-side), UTF-8 clean, zone filter and
   the hardware card wired to the real node.
 
+**Wired ambient node, server side (2026-09-15, verified by runs pasted in session):**
+- `backend/hardware.py` `SensorNodeStore` — sensor-only nodes kept apart from the actuator bridge:
+  the reply is an acknowledgement, never a command, and a sensor post cannot overwrite the rig's
+  reading (regression `test_a_sensor_node_can_never_touch_the_rig`). Temp OR fault per reading
+  (faults recorded, never turned into numbers); inferred health stale / sensor_fault / stuck;
+  at most 8 nodes, least recently seen evicted; a `calibrated` flag only a real boolean true sets.
+- Endpoints (additive): `POST /api/hw/sensor`, `GET /api/hw/sensors`,
+  `GET /api/hw/sensors/{node_id}/log`; `ambient` added to `/api/hw/status`, `/api/state.hardware`
+  and `/api/monitor.hardware`. Monitor's Physical-zone card shows the room temperature, labelled
+  *(uncalibrated)* until the node reports `calibrated: true`.
+- `hardware/firmware/ambient_node_uno/ambient_node_uno.ino` — LM35 on A0, internal 1.1 V reference,
+  64x oversampling, one JSON line per 2 s, rail-fault reporting, `CROSS_CALIBRATED` flag.
+- `scripts/serial_bridge.py` (USB serial -> `/api/hw/sensor`; auto-detects Arduino VIDs and
+  excludes the ESP32's CP210x) and `scripts/crosscal_ambient.py` (time-pairs Uno vs DHT22 readings,
+  gain-only VREF correction with residual check and DHT22-accuracy uncertainty).
+  `requirements-hardware.txt` holds pyserial — tooling only, never imported by `backend/`.
+- `tests/test_ambient.py` (32 tests). Suite **534 passed**; frozen numbers exact; `monitor.js`
+  syntax clean. README flashing step corrected for `secrets.h`.
+- **Not yet verified on hardware:** the Uno has not been flashed or bridged; the LM35 is not
+  cross-calibrated, so no ambient number is claimed. The L9110 stage (decision 15) is not wired yet: there is
+  no fan on hand and the LEDs work off the ESP32 pins directly, so it is optional until a
+  fan arrives - its only immediate value is testing safety layer 0. The fuse's rating is
+  unreadable, so no protection claim is made for it.
+
 **Workflow 1 outcome (verified 2026-08-17):** 10 agents, 0 errors. Every Phase A+B `[~]` above is now `[x]`:
 
 ```
@@ -470,3 +494,16 @@ so a number can never be hand-typed into a slide and drift from the code.
     verified on real hardware that way. No power stage is bought yet, so the demo presents these as
     "actuator channels verified on indicators; power stage pending", never as a working fan.
     Calibration (which needs a real heater of known wattage) waits for that purchase.
+15. **(2026-09-15, team decision) L9110 power stage, fuse and toggle switch go in now, on parts in
+    hand.** The L9110 is powered from the ESP32's 5 V pin through the fuse and the switch, and the
+    indicator LEDs move onto its outputs — this verifies safety layer 0 (a physical kill no software
+    can override) and the `DRIVER_L9110` firmware path. The 12 V fan may be tried at 5 V; it is claimed
+    only if it visibly spins. The resistor heater is NOT built: only a mixed handful of resistors is
+    available, so calibration still waits for a heater purchase (decision 14 stands on that point).
+16. **(2026-09-15, team decision) The Arduino Uno becomes a wired, sensor-only ambient node.** An LM35
+    read on the Uno's internal 1.1 V reference with 64x oversampling streams one JSON line per reading
+    over USB serial, and a bridge script forwards it to the server. Two reasons: a true room-air
+    reference beside the rig, and a second transport through the same seam (a wired bus, the shape of
+    RS-485/Modbus sensor networks in real buildings) next to the ESP32's Wi-Fi. It never receives
+    actuator commands, so it adds no actuation path. Its internal reference varies up to ±10 % chip to
+    chip, so it is cross-calibrated against the DHT22 before any reading from it is used.

@@ -61,6 +61,10 @@ RH_RANGE = (0.0, 100.0)
 
 FAN_LEVEL_W = {0: 0.0, 1: 1.5, 2: 2.5}   # nominal 40 mm 5 V fan draw, for display
 
+SENSOR_NODE_LOG_MAX = 8192    # per sensor-only node; same horizon as the rig log
+SENSOR_NODE_MAX = 8           # distinct sensor-only nodes kept; least recently seen evicted
+STUCK_WINDOW = 8              # this many bit-identical readings in a row -> "stuck"
+
 
 class HardwareBridge:
     """Latest reading + command buffer + safety envelope for one physical node.
@@ -288,6 +292,132 @@ class HardwareBridge:
                             "ok": ok, "reason": reason})
         if len(self.writes) > WRITES_MAX:
             del self.writes[:-WRITES_MAX]
+
+
+class SensorNodeStore:
+    """Sensor-only nodes: latest reading and a bounded log per node_id.
+
+    WHY THIS IS NOT HardwareBridge. The bridge is the ONE actuator node: its
+    reply carries fan/heater commands and it owns the safety envelope. A second
+    node POSTing to /api/hw/reading would overwrite the rig's latest reading and
+    be handed commands it cannot apply. Sensor-only nodes (the Uno ambient
+    reference over USB serial, and any future wired-bus sensor) land here, and
+    nothing they send can command anything: the reply is an acknowledgement.
+
+    INPUT: post(payload) per reading. A node reports EITHER temp_c OR a fault
+      string (the Uno sends fault="sensor_open_or_short" when its ADC sits at a
+      rail). A fault is recorded, never converted into a number.
+    OUTPUT: status() and log_rows(node_id), json-safe, empty-but-valid shapes.
+    SIDE EFFECTS: bounded per-node logs; at most SENSOR_NODE_MAX nodes, least
+      recently seen evicted first, so a typo'd node_id cannot grow memory.
+    ERROR STATES: post raises ValueError naming the field (endpoint -> 422);
+      log_rows raises KeyError for an unknown node (endpoint -> 404).
+
+    Wall clock, like the rig. Nothing here feeds the physics or the controller.
+    """
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._nodes: dict = {}
+
+    def post(self, payload: dict, now: float | None = None) -> dict:
+        """Accept one sensor-only reading. See the class docstring."""
+        now = time.time() if now is None else float(now)
+        node = str(payload.get("node_id") or "").strip()
+        if not node:
+            raise ValueError("node_id must be a non-empty string")
+        if len(node) > 64:
+            raise ValueError("node_id must be at most 64 characters")
+        fault = payload.get("fault")
+        temp = None
+        if fault is not None:
+            fault = str(fault).strip()[:64] or "unspecified"
+        else:
+            try:
+                temp = float(payload["temp_c"])
+            except (KeyError, TypeError, ValueError):
+                raise ValueError("temp_c must be a number (or send a fault string)") from None
+            if not (TEMP_RANGE_C[0] <= temp <= TEMP_RANGE_C[1]):
+                raise ValueError(f"temp_c {temp} outside plausible {TEMP_RANGE_C}")
+        counts = payload.get("counts")
+        if counts is not None:
+            try:
+                counts = float(counts)
+            except (TypeError, ValueError):
+                raise ValueError("counts must be a number or null") from None
+        try:
+            seq = int(payload.get("seq", 0) or 0)
+            uptime = float(payload.get("uptime_s", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            raise ValueError("seq must be an integer and uptime_s a number") from None
+        reading = {"node_id": node,
+                   "role": str(payload.get("role") or "ambient")[:32],
+                   "transport": str(payload.get("transport") or "unknown")[:32],
+                   "temp_c": temp, "fault": fault, "counts": counts,
+                   "seq": seq, "uptime_s": uptime, "t_wall": now,
+                   # the node's own claim; only a real boolean true counts
+                   "calibrated": payload.get("calibrated") is True}
+        with self._lock:
+            n = self._nodes.get(node)
+            if n is None:
+                if len(self._nodes) >= SENSOR_NODE_MAX:
+                    oldest = min(self._nodes, key=lambda k: self._nodes[k]["last"]["t_wall"])
+                    del self._nodes[oldest]
+                n = self._nodes[node] = {"log": deque(maxlen=SENSOR_NODE_LOG_MAX),
+                                         "polls": 0, "faults": 0, "last": None}
+            n["last"] = reading
+            n["log"].append(reading)
+            n["polls"] += 1
+            n["faults"] += 1 if fault is not None else 0
+        return {"ok": True, "node_id": node, "accepted": fault is None}
+
+    def log_rows(self, node_id: str, limit: int = SENSOR_NODE_LOG_MAX) -> list:
+        """One node's readings, oldest first. KeyError for an unknown node."""
+        with self._lock:
+            n = self._nodes.get(node_id)
+            if n is None:
+                raise KeyError(node_id)
+            rows = list(n["log"])
+        return rows[-int(limit):]
+
+    def status(self, now: float | None = None) -> dict:
+        """Every node with staleness and INFERRED health, plus the ambient
+        reference: the first connected role=ambient node whose latest reading
+        is a real temperature, else None. Health faults: stale, sensor_fault
+        (latest report was a fault), stuck (STUCK_WINDOW identical readings)."""
+        now = time.time() if now is None else float(now)
+        with self._lock:
+            snap = {k: {"last": dict(v["last"]), "polls": v["polls"], "faults": v["faults"],
+                        "recent": [r["temp_c"] for r in list(v["log"])[-STUCK_WINDOW:]]}
+                    for k, v in self._nodes.items()}
+        nodes = []
+        for node_id in sorted(snap):
+            v = snap[node_id]
+            last = v["last"]
+            stale = max(0.0, now - last["t_wall"])
+            connected = stale <= STALE_S
+            faults: list = []
+            if not connected:
+                faults.append("stale")
+            if last["fault"] is not None:
+                faults.append("sensor_fault")
+            recent = v["recent"]
+            if len(recent) >= STUCK_WINDOW and None not in recent and len(set(recent)) == 1:
+                faults.append("stuck")
+            nodes.append({"node_id": node_id, "role": last["role"],
+                          "transport": last["transport"], "connected": connected,
+                          "stale_s": round(stale, 1), "reading": last,
+                          "polls": v["polls"], "faults_reported": v["faults"],
+                          "health": {"ok": not faults, "faults": faults}})
+        amb = next((n for n in nodes if n["role"] == "ambient" and n["connected"]
+                    and n["reading"]["temp_c"] is not None), None)
+        return {"nodes": nodes,
+                "ambient": None if amb is None else {
+                    "node_id": amb["node_id"], "temp_c": amb["reading"]["temp_c"],
+                    "stale_s": amb["stale_s"], "transport": amb["transport"],
+                    "calibrated": amb["reading"]["calibrated"],
+                    "health": amb["health"]},
+                "stale_after_s": STALE_S}
 
 
 # ==========================================================================

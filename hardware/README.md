@@ -112,7 +112,10 @@ assumes the firmware runs, layer 0 assumes nothing.
    - **DHT sensor library** (Adafruit) — DHT22 build, or **Adafruit SHT31** — SHT31 build
    - **ArduinoJson**
 4. Open `firmware/feelslike_node/feelslike_node.ino`.
-5. Set the three CHANGE-ME defines at the top: `WIFI_SSID`, `WIFI_PASS`, `GATEWAY_URL`.
+5. Copy `secrets.h.example` to `secrets.h` in the same folder and fill in `WIFI_SSID`,
+   `WIFI_PASS` (a **2.4 GHz** network - the ESP32 cannot see 5 GHz) and `GATEWAY_URL` (the
+   laptop's LAN IP, which changes with DHCP). `secrets.h` is git-ignored; never commit it.
+   Also run the server with `--host 0.0.0.0`, or the node's POSTs are refused.
    Check the two hardware defines match what you actually fitted: `SENSOR_DHT22` /
    `SENSOR_SHT31`, and `DRIVER_L9110` / `DRIVER_MOSFET`. Each pair is guarded by an
    `#error`, so getting it wrong fails at compile time rather than on the bench.
@@ -175,3 +178,55 @@ not a comfort device. Setpoint writes to this zone are rejected at the adapter s
 "rig is vent-only") rather than pretended — a setpoint implies closed-loop
 heating/cooling capacity the hardware does not have, and `capabilities()` says so
 in machine-readable form (`supports_setpoint: false`).
+
+## Ambient reference node (Arduino Uno + LM35)
+
+A second, **sensor-only** node. It measures the room air around the rig and reaches the
+server over a wired USB-serial link instead of Wi-Fi. That gives the rig a true ambient
+reference, and it shows the adapter seam taking a second transport — the shape of the
+RS-485/Modbus sensor buses real buildings use. It never receives commands and drives
+nothing. Firmware: `firmware/ambient_node_uno/ambient_node_uno.ino` (no libraries needed).
+
+It posts to `POST /api/hw/sensor`, **not** to `/api/hw/reading`: the rig's endpoint holds
+exactly one actuator node and replies with fan/heater commands, so a second node there
+would overwrite the rig's reading. Sensor-only nodes get an acknowledgement and nothing else.
+
+**Parts:** Arduino Uno, LM35, 3 jumper wires, the Uno's USB cable.
+
+**Wiring** (LM35 flat face toward you, legs pointing down):
+
+| LM35 pin | Uno pin |
+|---|---|
+| left (+Vs) | 5V |
+| middle (Vout) | A0 |
+| right (GND) | GND |
+
+If the LM35 turns hot to the touch, +Vs and GND are swapped — unplug immediately.
+
+**Flash:** Arduino IDE → Board **Arduino Uno** → the Uno's own COM port (**not** the ESP32's)
+→ Upload. Serial Monitor at 115200 should show one JSON line every 2 s. **Close the Serial
+Monitor before starting the bridge** — only one program can hold a serial port.
+
+**Run the bridge** (server running):
+
+```
+pip install -r requirements-hardware.txt
+python -m scripts.serial_bridge            # auto-detects the Uno, or pass --port COMx
+```
+
+Readings appear at `GET /api/hw/sensors`, and as `ambient` inside `/api/hw/status` and the
+`hardware` block of `/api/state`.
+
+**Cross-calibrate before trusting a single number.** The Uno's internal 1.1 V reference
+varies up to ±10 % from chip to chip, which is about ±3 °C at room temperature.
+
+1. Put the LM35 right beside the DHT22 — box open, fan off, heater off.
+2. Wait about 15 minutes for both to settle.
+3. `python -m scripts.crosscal_ambient --minutes 10`
+4. Set `VREF_V` in the Uno sketch to the suggested value, set `CROSS_CALIBRATED = true`,
+   and upload again. Until then the dashboard labels the room reading *uncalibrated*.
+
+The LM35 is linear through 0 °C, so a single gain correction (the reference) is the
+physically right fix; the script also reports the offset left over as a check. The result
+is only as good as the DHT22's own ±0.5 °C accuracy, and the script prints that uncertainty.
+Then move the LM35 outside the box, where it measures the room.
