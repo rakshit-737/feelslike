@@ -39,6 +39,7 @@ from sim.weather import outdoor_temp, solar_factor
 
 DT = 60.0            # simulation step (s)
 COP = 3.4            # cooling coefficient of performance
+HEAT_COP = 3.0       # heat-pump heating COP (only when heat_capacity_w is given)
 FAN_W = {0: 0.0, 1: 150.0, 2: 420.0}   # fan power by vent level, per zone
 VENT_UA = 45.0       # extra W/K of outdoor-air coupling per vent level
 BAND = (23.0, 26.5)  # occupied comfort band (degC), ASHRAE-ish for offices
@@ -135,11 +136,35 @@ _OCC_PEAK.update({
 class DigitalTwin:
     """Steps the 5-zone thermal model; accumulates energy & comfort metrics."""
 
-    def __init__(self, seed: int = 0, start_temp: float = 28.0, weather_fn=None):
+    def __init__(self, seed: int = 0, start_temp: float = 28.0, weather_fn=None,
+                 rh_fn=None, solar_fn=None, occupancy_fn=None, gain_fn=None,
+                 capacity_w=None, heat_capacity_w=None, coil_adp_c=None):
+        """Optional hooks (all default None = the original office twin, bit-identical):
+          rh_fn(t) -> outdoor %RH          replaces sim.humidity.outdoor_rh
+          solar_fn(orientation, t) -> 0..1 replaces sim.weather.solar_factor
+          occupancy_fn(zone_id, t) -> people (float) replaces the office schedules
+          gain_fn(zone_id, t) -> W         extra internal sensible gain (lights, plugs, IT)
+          capacity_w {zone_id: W}          per-zone cooling capacity override
+          heat_capacity_w {zone_id: W}     enables heating (heat pump) per zone
+          coil_adp_c float                 fixed coil apparatus dew point instead of
+                                           setpoint - ADP_APPROACH (see module docstring)
+        Used by backend/dataset (the historical dataset generator)."""
         self.seed = seed
         self.t = 0.0                       # sim seconds since Monday 00:00
         self.T = {z.id: start_temp for z in ZONES}
         self.weather_fn = weather_fn or (lambda t: outdoor_temp(t, seed))
+        self.rh_fn = rh_fn
+        self.solar_fn = solar_fn
+        self.occupancy_fn = occupancy_fn
+        self.gain_fn = gain_fn
+        self.capacity_w = dict(capacity_w) if capacity_w else None
+        self.heat_capacity_w = dict(heat_capacity_w) if heat_capacity_w else None
+        self.coil_adp_c = coil_adp_c
+        self.envelope_scale = 1.0          # Phase 5: multiplies every zone's envelope UA
+        self.heat_setpoints = {}           # zone_id -> degC; only read when heating exists
+        self.last_cool_w = {z.id: 0.0 for z in ZONES}
+        self.last_heat_w = {z.id: 0.0 for z in ZONES}
+        self.last_fan_w = {z.id: 0.0 for z in ZONES}
         self.kwh = 0.0
         self.kwh_by_zone = {z.id: 0.0 for z in ZONES}
         self.viol_min = 0.0                # occupied minutes outside band
@@ -184,12 +209,16 @@ class DigitalTwin:
         """
         z = ZONE_BY_ID[zone_id]
         t = self.t + ahead_h * 3600.0
-        occ = occupancy(z.occ_profile, int(t // 86400), (t % 86400) / 3600.0)
+        if self.occupancy_fn is not None:
+            occ = float(self.occupancy_fn(zone_id, t))
+        else:
+            occ = occupancy(z.occ_profile, int(t // 86400), (t % 86400) / 3600.0)
         return max(0, int(round(occ * self.occ_scale)))
 
     def _outdoor_rh_at(self, t: float) -> float:
         """Outdoor RH at sim time t including humidity_offset, clamped 0..100."""
-        return min(100.0, max(0.0, outdoor_rh(t, self.seed) + self.humidity_offset))
+        base = self.rh_fn(t) if self.rh_fn is not None else outdoor_rh(t, self.seed)
+        return min(100.0, max(0.0, base + self.humidity_offset))
 
     # ---- condition knobs ------------------------------------------------
     def set_conditions(self, occ_scale=None, capacity_scale=None, solar_scale=None,
@@ -255,7 +284,7 @@ class DigitalTwin:
         """
         z = ZONE_BY_ID[zone_id]
         occ = self.occupancy_now(zone_id)
-        cap = z.max_cool * self.capacity_scale
+        cap = self._cool_cap(z)
         peak = _OCC_PEAK[zone_id]   # 100% = this zone's weekday design headcount
         return {
             "temp_c": round(self.T[zone_id], 2),
@@ -280,7 +309,15 @@ class DigitalTwin:
         INPUT: none.  OUTPUT: a new DigitalTwin at the same sim time and state.
         SIDE EFFECTS: none on self.  ERROR STATES: none.
         """
-        c = DigitalTwin(seed=self.seed, weather_fn=self.weather_fn)
+        c = DigitalTwin(seed=self.seed, weather_fn=self.weather_fn, rh_fn=self.rh_fn,
+                        solar_fn=self.solar_fn, occupancy_fn=self.occupancy_fn,
+                        gain_fn=self.gain_fn, capacity_w=self.capacity_w,
+                        heat_capacity_w=self.heat_capacity_w, coil_adp_c=self.coil_adp_c)
+        c.heat_setpoints = dict(self.heat_setpoints)
+        c.envelope_scale = self.envelope_scale
+        c.last_cool_w = dict(self.last_cool_w)
+        c.last_heat_w = dict(self.last_heat_w)
+        c.last_fan_w = dict(self.last_fan_w)
         c.t = self.t
         c.T = dict(self.T)
         c.W = dict(self.W)
@@ -304,6 +341,11 @@ class DigitalTwin:
         c._at_cap = dict(self._at_cap)
         return c
 
+    def _cool_cap(self, z) -> float:
+        """Cooling capacity W: per-zone override when given, else the zone's own."""
+        base = self.capacity_w.get(z.id, z.max_cool) if self.capacity_w else z.max_cool
+        return base * self.capacity_scale
+
     # ---- one simulation step ------------------------------------------
     def step(self, setpoints: dict, vents: dict, dt: float = DT) -> dict:
         """setpoints: zone_id -> degC (or None = HVAC off). vents: zone_id -> 0|1|2."""
@@ -318,10 +360,13 @@ class DigitalTwin:
             occ = self.occupancy_now(z.id)
             vent = int(vents.get(z.id, 0))
 
-            q_env = z.UA * (t_out - T)
+            q_env = z.UA * self.envelope_scale * (t_out - T)   # scale 1.0 = bit-identical
             q_vent = VENT_UA * vent * (t_out - T)          # outdoor-air load
-            q_int = (z.solar_peak * solar_factor(z.orientation, h) * self.solar_scale
-                     + 100.0 * occ)
+            sf = (self.solar_fn(z.orientation, self.t) if self.solar_fn is not None
+                  else solar_factor(z.orientation, h))
+            q_int = z.solar_peak * sf * self.solar_scale + 100.0 * occ
+            if self.gain_fn is not None:
+                q_int += float(self.gain_fn(z.id, self.t))
             q_nbr = 0.0
             for (a, b), g in ADJACENCY.items():
                 if a == z.id:
@@ -335,16 +380,27 @@ class DigitalTwin:
             # Cooling to setpoint, capacity-limited
             sp = setpoints.get(z.id)
             q_cool = 0.0
-            cap = z.max_cool * self.capacity_scale
+            cap = self._cool_cap(z)
             at_cap = False
             if sp is not None and T_free > sp:
                 q_need = z.C * (T_free - sp) / dt          # W to remove
                 q_cool = min(q_need, cap)
                 at_cap = q_need > cap
-            T_new = T_free - dt * q_cool / z.C
+            q_heat = 0.0
+            if self.heat_capacity_w is not None:
+                hsp = self.heat_setpoints.get(z.id)
+                hcap = float(self.heat_capacity_w.get(z.id, 0.0))
+                if hsp is not None and T_free < hsp and hcap > 0.0:
+                    q_heat = min(z.C * (hsp - T_free) / dt, hcap)
+            T_new = T_free - dt * (q_cool - q_heat) / z.C
             self._at_cap[z.id] = at_cap
+            self.last_cool_w[z.id] = q_cool
+            self.last_heat_w[z.id] = q_heat
+            self.last_fan_w[z.id] = FAN_W[vent]
 
             p_zone = q_cool / COP + FAN_W[vent]
+            if q_heat > 0.0:
+                p_zone += q_heat / HEAT_COP
             power_w += p_zone
             self.kwh_by_zone[z.id] += p_zone * dt / 3.6e6
 
@@ -369,7 +425,8 @@ class DigitalTwin:
             if m_dehum > 0.0:
                 # A coil cannot dry air below its apparatus dew point: saturated
                 # air a couple of K below the entering/leaving air temperature.
-                t_adp = min(sp if sp is not None else T_new, T_new) - ADP_APPROACH
+                t_adp = (self.coil_adp_c if self.coil_adp_c is not None
+                         else min(sp if sp is not None else T_new, T_new) - ADP_APPROACH)
                 W_new = max(W_new, humidity_ratio(t_adp, 100.0))
             # Never negative, never supersaturated at the zone temperature.
             W_new = min(max(W_new, 0.0), humidity_ratio(T_new, 100.0))
